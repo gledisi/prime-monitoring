@@ -9,8 +9,8 @@ services:
     ports:
      - "7103:7103"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.5
+      prime_net_1:
+        ipv4_address: 192.168.55.3
 
   prime_2:
     container_name: prime_2
@@ -20,8 +20,8 @@ services:
     ports:
      - "7104:7104"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.6
+      prime_net_1:
+        ipv4_address: 192.168.55.4
 
   prime_3:
     container_name: prime_3
@@ -31,8 +31,8 @@ services:
     ports:
      - "7105:7105"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.7
+      prime_net_1:
+        ipv4_address: 192.168.55.5
   
   prime_4:
     container_name: prime_4
@@ -42,22 +42,22 @@ services:
     ports:
      - "7106:7106"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.8
+      prime_net_1:
+        ipv4_address: 192.168.55.6
 
   client_1:
     container_name: prime_c1
     image: ggjinaj/prime_c
     environment:
-      - IP=10.5.0.9
+      - IP=192.168.55.7
       - CLIENT_NUM=5
       - SERVER_NUM=1
       - PORT=8081
     ports:
      - "8081:8081"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.9
+      prime_net_1:
+        ipv4_address: 192.168.55.7
     depends_on:
      - prime_1
 
@@ -65,15 +65,15 @@ services:
     container_name: prime_c2
     image: ggjinaj/prime_c
     environment:
-      - IP=10.5.0.10
+      - IP=192.168.55.8
       - CLIENT_NUM=6
       - SERVER_NUM=2
       - PORT=8082
     ports:
      - "8082:8082"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.10
+      prime_net_1:
+        ipv4_address: 192.168.55.8
     depends_on:
      - prime_2
      
@@ -81,15 +81,15 @@ services:
     container_name: prime_c3
     image: ggjinaj/prime_c
     environment:
-      - IP=10.5.0.11
+      - IP=192.168.55.9
       - CLIENT_NUM=7
       - SERVER_NUM=3
       - PORT=8083
     ports:
      - "8083:8083"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.11
+      prime_net_1:
+        ipv4_address: 192.168.55.9
     depends_on:
      - prime_3
 
@@ -97,22 +97,22 @@ services:
     container_name: prime_c4
     image: ggjinaj/prime_c
     environment:
-      - IP=10.5.0.12
+      - IP=192.168.55.10
       - CLIENT_NUM=8
       - SERVER_NUM=4
       - PORT=8084
     ports:
      - "8084:8084"
     networks:
-      prime_net:
-        ipv4_address: 10.5.0.12
+      prime_net_1:
+        ipv4_address: 192.168.55.10
     depends_on:
      - prime_4
 
 networks:
-  prime_net:
+  prime_net_1:
     driver: bridge
     ipam:
      config:
-       - subnet: 10.5.0.0/16
-         gateway: 10.5.0.1
+       - subnet: 192.168.55.0/24
+         gateway: 192.168.55.1

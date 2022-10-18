@@ -1,11 +1,10 @@
 FROM gcc:latest
-RUN apt-get update && apt-get -y install build-essential iproute2 libboost-dev
 
-COPY . /prime-client/
+COPY . /prime/
 
-WORKDIR /prime-client/src
-RUN make client
+WORKDIR /prime/src
+RUN make prime
 
-WORKDIR /prime-client/bin
+WORKDIR /prime/bin
 
-CMD ./client -l $IP -i $CLIENT_NUM -s $SERVER_NUM -p $PORT
+CMD ./prime -i $SERVER_NUM
