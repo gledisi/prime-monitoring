@@ -38,6 +38,7 @@
 # 
 
 INC = -I../stdutil/include -I../libspread-util/include -I../libspread-util/src -I../spines/libspines
+INC_CPP = -I../crow/include
 STDUTIL_LIB = ../stdutil/lib/libstdutil.a
 LIBSPREAD_UTIL = ../libspread-util/src/libspread-util.a
 TC_LIB = ../OpenTC-1.1/TC-lib-1.0/.libs/libTC.a
@@ -52,24 +53,28 @@ TC_LIB = ../OpenTC-1.1/TC-lib-1.0/.libs/libTC.a
 SPINES_LIB = ../spines/libspines/libspines.a
 
 CC = gcc
+CPP = g++
 #CFLAGS = -g -pg -O2 -Wall $(SPINES) $(INC)
 CFLAGS = -g -O2 -Wall $(INC)
+CPPFLAGS := -pthread -Wall -std=c++14 -DASIO_STANDALONE $(INC_CPP)
 
 WRAPPER_OBJ = error_wrapper.o openssl_rsa.o
 
-PRIME_OBJ = prime.o data_structs.o utility.o network.o pre_order.o \
-	util_dll.o validate.o process.o packets.o order.o \
+PRIME_OBJ = prime.o sqlite3.o ic.o data_structs.o utility.o network.o pre_order.o \
+	util_dll.o validate.o process.o packets.o order.o prime_repository.o \
 	signature.o net_wrapper.o merkle.o suspect_leader.o \
 	reliable_broadcast.o view_change.o erasure.o recon.o \
 	tc_wrapper.o catchup.o proactive_recovery.o $(WRAPPER_OBJ)
 
-CLIENT_OBJ = client.o data_structs.o utility.o network.o pre_order.o \
-	util_dll.o packets.o process.o order.o \
+CLIENT_OBJ = client.o sqlite3.o rest_api.o query_repository.o main_client.o  ic.o data_structs.o utility.o network.o pre_order.o \
+	util_dll.o packets.o process.o order.o prime_repository.o \
 	signature.o net_wrapper.o erasure.o validate.o suspect_leader.o \
 	reliable_broadcast.o view_change.o catchup.o proactive_recovery.o \
 	merkle.o recon.o tc_wrapper.o $(WRAPPER_OBJ)
 
 GEN_KEYS_OBJ = openssl_rsa.o generate_keys.o tc_wrapper.o
+
+.PHONY: all clean
 
 all: $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) prime client gen_keys
 
@@ -86,13 +91,16 @@ gen_keys: $(GEN_KEYS_OBJ)
 	$(CC) $(CFLAGS) -o ../bin/gen_keys $(GEN_KEYS_OBJ) $(LIBSPREAD_UTIL) $(TC_LIB) -lcrypto -ldl -lpthread -lrt
 
 prime: $(PRIME_OBJ)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o ../bin/prime $(PRIME_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lpthread -lrt
+	$(CC) $(CFLAGS) -o ../bin/prime $(PRIME_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lpthread -lrt
 
 client: $(CLIENT_OBJ)
-	$(CC) -o ../bin/client $(CLIENT_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lpthread -lrt
+	$(CPP) $(CFLAGS) $(CPPFLAGS) -o ../bin/client $(CLIENT_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lrt
 
 %.o:	%.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $*.o $*.c
+
+%.o:	%.cpp
+	$(CPP) $(CPPFLAGS) -c -o $*.o $*.cpp
 
 clean:
 	rm -f *~

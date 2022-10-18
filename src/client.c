@@ -46,6 +46,7 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <arpa/inet.h>
 #include "arch.h"
 #include "spu_alarm.h"
 #include "spu_events.h"
@@ -58,7 +59,9 @@
 #include "network.h"
 #include "utility.h"
 #include "net_wrapper.h"
-#include "merkle.h"
+#include "client.h"
+#include "prime_repository.h"
+#include "ic.h"
 
 /* The behavior of the client can be controlled with parameters that follow */
 
@@ -66,14 +69,13 @@
  * having multiple requests outstanding at one time.  After sending
  * the specified number of requests, the client does not send a new
  * one until it receives a response to one of the previous ones. */
-#define NUM_CLIENTS_TO_EMULATE 1
+#define NUM_CLIENTS_TO_EMULATE 50
 
 /* Adjust this to configure how often a client prints. */
-/*#define PRINT_INTERVAL NUM_CLIENTS_TO_EMULATE*/
-#define PRINT_INTERVAL 10
+#define PRINT_INTERVAL 100
 
 /* This sets the maximum number of updates a client can submit */
-#define MAX_ACTIONS 100000 
+#define MAX_ACTIONS 100000
 
 /* This is the number of buckets used for the latency histogram */
 #define NUM_BUCKETS 21
@@ -92,42 +94,44 @@ void Init_Client_Network(void);
 void Net_Cli_Recv(channel sk, int dummy, void *dummy_p); 
 void Process_Message( signed_message *mess, int32u num_bytes );
 void Run_Client(void);
-void Send_Update(int dummy, void *dummyp);
 void CLIENT_Cleanup(void);
 int32u Validate_Message( signed_message *mess, int32u num_bytes ); 
 double Compute_Average_Latency(void);
 void clean_exit(int signum);
 
+void init_influx_db();
+
 /* Client Variables */
 extern network_variables NET;
-
 int32u My_Client_ID;
 int32u My_Server_ID;
 
 int32u my_incarnation;
-int32u update_count;
-double total_time;
 int32u time_stamp;
 
 /* Local buffers for receiving the packet */
 static sys_scatter srv_recv_scat;
-/* static sys_scatter ses_recv_scat; */
 
 int32u num_outstanding_updates;
 int32u send_to_server;
-int32u last_executed = 0;
 int32u executed[MAX_ACTIONS];
 int sd[NUM_SERVER_SLOTS];
+int sock;
 util_stopwatch update_sw[MAX_ACTIONS];
 
 util_stopwatch sw;
 util_stopwatch latency_sw;
 signed_message *pending_update;
 double Latencies[MAX_ACTIONS];
+double previous_time;
 int32u Histogram[NUM_BUCKETS];
 double Min_PO_Time, Max_PO_Time;
-/* FILE *fp; */
 struct sockaddr_un Conn;
+
+
+int get_value(){
+    return -1;
+}
 
 void clean_exit(int signum)
 {
@@ -136,19 +140,15 @@ void clean_exit(int signum)
   CLIENT_Cleanup();
 }
 
-int main(int argc, char** argv) 
+void init_client(int argc, char** argv)
 {
-  /* char buf[128]; */
-
   Usage(argc, argv);
   Alarm_set_types(PRINT);
 
   NET.program_type = NET_CLIENT_PROGRAM_TYPE;  
-  update_count     = 0;
   time_stamp       = 0;
-  total_time       = 0;
-  
-  UTIL_Load_Addresses(); 
+
+  UTIL_Load_Addresses();
 
   E_init(); 
   Init_Memory_Objects();
@@ -170,16 +170,13 @@ int main(int argc, char** argv)
   signal(SIGTTIN, clean_exit);
   signal(SIGPIPE, clean_exit);
 
+
+
   Run_Client();
 
   Alarm(PRINT, "%d entering event system.\n", My_Client_ID);
-  fflush(stdout);
   E_handle_events();
-  Send_Update(1,NULL);
-  Alarm(PRINT, "%d finishing!!!\n", My_Client_ID);
   fflush(stdout);
-
-  return 0;
 }
 
 void Init_Memory_Objects(void)
@@ -201,7 +198,7 @@ void Usage(int argc, char **argv)
 
   while(--argc > 0) {
     argv++;
-    
+
     /* [-l A.B.C.D] */
     if((argc > 1) && (!strncmp(*argv, "-l", 2))) {
       sscanf(argv[1], "%s", ip_str);
@@ -224,12 +221,15 @@ void Usage(int argc, char **argv)
       sscanf(argv[1], "%d", &tmp);
       My_Server_ID = tmp;
       if(My_Server_ID > NUM_SERVERS || My_Server_ID <= 0) {
-	Alarm(PRINT, "Server ID must be between 1 and %d\n", NUM_SERVERS);
+	Alarm(PRINT, "Server ID must be between 1 and %d\n");
 	exit(0);
       }
       argc--; argv++;
     }
-    else {
+    else if((argc > 1)&&(!strncmp(*argv, "-p", 2))) {
+        Alarm(PRINT, "Port number %d\n", NUM_SERVERS);
+        argc--; argv++;
+    }else {
       Print_Usage();
     }
   }
@@ -241,7 +241,7 @@ void Usage(int argc, char **argv)
   /* Port is computed as a function of the client id */
   NET.Client_Port = PRIME_CLIENT_BASE_PORT + My_Client_ID;
 
-  Alarm(PRINT, "Client %d, IP = "IPF", Port = %d\n", 
+  Alarm(PRINT, "Client %d, IP = "IPF", Port = %d\n",
 	My_Client_ID, IP(NET.My_Address), NET.Client_Port);
   if(My_Server_ID == 0)
     Alarm(PRINT, "Rotating updates across all servers.\n");
@@ -282,7 +282,7 @@ void Init_Client_Network(void)
 {
   struct sockaddr_in server_addr;
   struct sockaddr_un my_addr;
-  int32u i;
+  int32u port = PRIME_TCP_BASE_PORT + My_Server_ID;
   
   /* Initialize the receiving scatters */
   srv_recv_scat.num_elements    = 1;
@@ -290,13 +290,7 @@ void Init_Client_Network(void)
   srv_recv_scat.elements[0].buf = (char *) new_ref_cnt(PACK_BODY_OBJ);
   if(srv_recv_scat.elements[0].buf == NULL)
     Alarm(EXIT, "Init_Client_Network: Cannot allocate packet object\n");
-  
-  /* ses_recv_scat.num_elements    = 1;
-  ses_recv_scat.elements[0].len = sizeof(packet);
-  ses_recv_scat.elements[0].buf = (char *) new_ref_cnt(PACK_BODY_OBJ);
-  if(ses_recv_scat.elements[0].buf == NULL)
-    Alarm(EXIT, "Init_Client_Network: Cannot allocate packet object\n"); */
- 
+
   /* Initialize IPC socket, single one in this case */
   if (USE_IPC_CLIENT) {
     if (My_Server_ID == 0) {
@@ -310,8 +304,7 @@ void Init_Client_Network(void)
     }
     memset(&my_addr, 0, sizeof(struct sockaddr_un));
     my_addr.sun_family = AF_UNIX;
-    snprintf(my_addr.sun_path, sizeof(my_addr.sun_path) - 1, "%s%d", 
-                (char *)CLIENT_IPC_PATH, My_Server_ID);
+    snprintf(my_addr.sun_path, sizeof(my_addr.sun_path) - 1, "%s%d",(char *)CLIENT_IPC_PATH, My_Server_ID);
     if (remove(my_addr.sun_path) == -1 && errno != ENOENT) {
         perror("client: error removing previous path binding");
         exit(EXIT_FAILURE);
@@ -344,43 +337,45 @@ void Init_Client_Network(void)
   }
   /* Initialize the TCP sockets, one per server in my site */
   else {
-    for(i = 1; i <= NUM_SERVERS; i++) {
+//    for(i = 1; i <= 1; i++) {
 
       /* If we're sending to a particular server, set up a connection
        * with that server only. */
-      if(My_Server_ID != 0 && i != My_Server_ID)
-        continue;
+//      if(My_Server_ID != 0 && i != My_Server_ID)
+//        continue;
 
-      if((sd[i] = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+      if((sock= socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("socket");
         fflush(stdout);
         exit(0);
       }
 
-      assert(sd[i] != fileno(stderr));
-
+      assert(sock != fileno(stderr));
+      Alarm(PRINT,"Client listening to port %d address: %s",port,NET.server_address_name[My_Server_ID]);
       memset(&server_addr, 0, sizeof(server_addr));
       server_addr.sin_family      = AF_INET;
-      server_addr.sin_port        = htons(PRIME_TCP_BASE_PORT + i);
-      server_addr.sin_addr.s_addr = htonl(UTIL_Get_Server_Address(i));
+      server_addr.sin_port        = htons(port);
+      if(inet_pton(AF_INET, NET.server_address_name[My_Server_ID], &server_addr.sin_addr) <= 0){
+          perror("address");
+          fflush(stdout);
+          exit(0);
+      }
+      //server_addr.sin_addr.s_addr = htonl(UTIL_Get_Server_Address(i));
         
-      if((connect(sd[i], (struct sockaddr *)&server_addr, 
-          sizeof(server_addr))) < 0) {
+      if((connect(sock, (struct sockaddr *)&server_addr,sizeof(server_addr))) < 0) {
         perror("connect");
-        Alarm(PRINT, "Client %d could not connect to server server %d\n", 
-          My_Client_ID, i);
+        Alarm(PRINT, "Client %d could not connect to server %d\n",My_Client_ID, My_Server_ID);
         fflush(stdout);
         exit(0);
       }
-      Alarm(PRINT, "Client %d connected to server %d\n", My_Client_ID, i);
+      Alarm(PRINT, "Client %d connected to server %d\n", My_Client_ID, My_Server_ID);
 
       /* Register the socket descriptor with the event system */
-      E_attach_fd(sd[i], READ_FD, Net_Cli_Recv, 0, NULL, MEDIUM_PRIORITY);
+      E_attach_fd(sock, READ_FD, Net_Cli_Recv, 0, NULL, MEDIUM_PRIORITY);
 
       /* Maximize the size of the socket buffers */
-      max_rcv_buff(sd[i]);
-      max_snd_buff(sd[i]);
-    }
+      max_rcv_buff(sock);
+      max_snd_buff(sock);
   }
 }
 
@@ -456,15 +451,13 @@ void Net_Cli_Recv(channel sk, int dummy, void *dummy_p)
   Alarm(DEBUG, "Received %d bytes!\n", received_bytes);
   
   /* Validate the client response */
-  if(!Validate_Message((signed_message*)srv_recv_scat.elements[0].buf, 
- 	       received_bytes)) {
+  if(!Validate_Message((signed_message*)srv_recv_scat.elements[0].buf,received_bytes)) {
     Alarm(DEBUG,"CLIENT VALIDATION FAILURE\n");
     return;
   } 
 
   /* Now process the message */
-  Process_Message( (signed_message*)(srv_recv_scat.elements[0].buf),  
-		   received_bytes);
+  Process_Message( (signed_message*)(srv_recv_scat.elements[0].buf),received_bytes);
   
   if(get_ref_cnt(srv_recv_scat.elements[0].buf) > 1) {
     dec_ref_cnt(srv_recv_scat.elements[0].buf);
@@ -478,6 +471,7 @@ void Net_Cli_Recv(channel sk, int dummy, void *dummy_p)
 int32u Validate_Message( signed_message *mess, int32u num_bytes ) 
 {
   client_response_message *r;
+  signed_message *payload;
   /* int ret; */
  
   if(mess->type != CLIENT_RESPONSE) {
@@ -494,10 +488,13 @@ int32u Validate_Message( signed_message *mess, int32u num_bytes )
   r = (client_response_message *)(mess+1);
 
   if(r->machine_id != My_Client_ID) {
-    Alarm(DEBUG, "Received response not intended for me! targ = %d\n", r->machine_id);
+    Alarm(PRINT, "Received response not intended for me! targ = %d\n", r->machine_id);
     return 0;
   }
 
+  payload = (signed_message *)(r+1);
+
+  Alarm(PRINT, "Executed value is:%d for seq %d. payload: %d. \n",executed[r->seq_num],r->seq_num,payload->machine_id);
   if(executed[r->seq_num] != 0) {
     Alarm(PRINT, "Already processed response for seq %d\n", r->seq_num);
     return 0;
@@ -527,7 +524,7 @@ int32u Validate_Message( signed_message *mess, int32u num_bytes )
   return 1;  
 }
 
-void Process_Message( signed_message *mess, int32u num_bytes ) 
+void Process_Message(signed_message *mess, int32u num_bytes)
 {
   client_response_message *response_specific;
   double time;
@@ -537,9 +534,8 @@ void Process_Message( signed_message *mess, int32u num_bytes )
   UTIL_Stopwatch_Stop(&update_sw[response_specific->seq_num]);
   time = UTIL_Stopwatch_Elapsed(&update_sw[response_specific->seq_num]);
   if (time >= 0.1)
-    Alarm(PRINT, "** %d\ttotal=%f\tPO=%f\n", response_specific->seq_num, time,
-          response_specific->PO_time);
-
+    Alarm(PRINT, "** %d\ttotal=%f\tPO=%f\n", response_specific->seq_num, time,response_specific->PO_time);
+  //value = mess->value;
   Latencies[response_specific->seq_num] = time;
   executed[response_specific->seq_num]  = 1;
   if (response_specific->PO_time < Min_PO_Time)
@@ -548,18 +544,21 @@ void Process_Message( signed_message *mess, int32u num_bytes )
     Max_PO_Time = response_specific->PO_time;
 
   if(response_specific->seq_num % PRINT_INTERVAL == 0)
-    Alarm(PRINT, "%d\ttotal=%f\tPO=%f\n", response_specific->seq_num, 
-                    time, response_specific->PO_time);
+    Alarm(PRINT, "%d\ttotal=%f\tPO=%f\n", response_specific->seq_num,time, response_specific->PO_time);
   
   num_outstanding_updates--;
+  previous_time += time;
+  ic_measure("update");
+  ic_long("seq_num",response_specific->seq_num);
+  ic_double("latency",previous_time);
+  ic_measureend();
+  ic_push();
 
-  //sleep(1);
+  //sleep(5);
   //usleep(100000);
   /* Wait for a random delay */
-  /* usleep(rand() % DELAY_RANGE); */
-
-  Send_Update(0, NULL);
-  return;
+  //usleep(rand() % DELAY_RANGE);
+  //Send_Update(0, NULL);
 }
 
 void Run_Client()
@@ -577,65 +576,84 @@ void Run_Client()
     send_to_server = My_Server_ID;
   else
     send_to_server = 1;
-  Send_Update(0, NULL);
+
+  init_influx_db();
+
+  //Send_Update("HEY", 0);
 }
 
-void Send_Update(int dummy, void *dummyp)
+void init_influx_db(){
+    char *user = "admin";
+    char *pass = "admin1234";
+    Alarm(PRINT, "Connecting with influx...\n");
+    char buf[300 + 1];
+    char myhostname[256 + 1];
+    //ic_debug(1); /* medium output */
+    ic_influx_database("172.17.0.1", 8086, "test1");
+    ic_influx_userpw(user,pass);
+    /* get the local machine hostname */
+    if (gethostname(myhostname, sizeof(myhostname)) == -1) {
+        perror("gethostname() failed");
+    }
+    snprintf(buf, 300, "host=%d", send_to_server);
+    ic_tags(buf);
+}
+
+void Send_Update(const char *key,int value)
 {
   signed_message *update;
   update_message *update_specific;
+  operation_message *operation;
   int ret;
-
-  while(num_outstanding_updates < NUM_CLIENTS_TO_EMULATE) {
+  if(num_outstanding_updates < NUM_CLIENTS_TO_EMULATE) {
 
     /* Build a new update */
     update             = UTIL_New_Signed_Message();
     update->machine_id = My_Client_ID;
     update->len        = sizeof(update_message) + UPDATE_SIZE;
+    update->incarnation= my_incarnation;
     update->type       = UPDATE;
 
     update_specific = (update_message*)(update+1);
 
-    time_stamp++; 
-    //update_specific->server_id   = send_to_server;
+    time_stamp++;
     update_specific->server_id   = My_Client_ID;
-    update->incarnation          = my_incarnation;
-    update_specific->seq_num     = time_stamp; 
+    update_specific->seq_num     = time_stamp;
     update_specific->address     = NET.My_Address;
     update_specific->port        = NET.Client_Port;
 
+    operation = (operation_message *)(update_specific+1);
+
+    operation->type = CLIENT_STATE_TRANSFER;
+    strcpy(operation->key, key);
+    operation->value = value;
     /* Start the clock on this update */
     UTIL_Stopwatch_Start(&update_sw[time_stamp]);
 
-    /* Sign the message */
-    //update->mt_num   = 1;
-    //update->mt_index = 1;
 
     if(CLIENTS_SIGN_UPDATES)
       UTIL_RSA_Sign_Message(update);
 
-    Alarm(DEBUG, "%d Sent %d to server %d\n", 
-	  My_Client_ID, time_stamp, send_to_server);
+    Alarm(PRINT, "%d Sent %d to server %d\n",My_Client_ID, time_stamp, send_to_server);
 
     if (USE_IPC_CLIENT) {
         ret = sendto(sd[send_to_server], update, sizeof(signed_update_message), 0,
                     (struct sockaddr *)&Conn, sizeof(struct sockaddr_un));
-    }
-    else {
-        ret = NET_Write(sd[send_to_server], update, sizeof(signed_update_message));
+    }else {
+        ret = NET_Write(sock, update, sizeof(signed_update_message));
     }
 
     if(ret <= 0) {
       perror("sendto prime");
       fflush(stdout);
-      close(sd[send_to_server]);
-      E_detach_fd(sd[send_to_server], READ_FD);
+      close(sock);
+      E_detach_fd(sock, READ_FD);
       CLIENT_Cleanup();
     }
-    
+
     dec_ref_cnt(update);
 
-    /* If we're rotating across all servers, send the next one to the 
+    /* If we're rotating across all servers, send the next one to the
      * next server modulo the total number of servers. */
     if(My_Server_ID == 0) {
 
@@ -649,7 +667,7 @@ void Send_Update(int dummy, void *dummyp)
     }
 
     num_outstanding_updates++;
-  }
+ }
 }
 
 void CLIENT_Cleanup()
@@ -696,12 +714,8 @@ void CLIENT_Cleanup()
   Alarm(PRINT, "Min PO Time = %f\n", Min_PO_Time);
   Alarm(PRINT, "Max PO Time = %f\n", Max_PO_Time);
 
-  Alarm(PRINT, "%d: %d updates\tAverage Latency: %f\n", 
-	My_Client_ID, num_executed, (sum / (double)num_executed));
+  Alarm(PRINT, "%d: %d updates\tAverage Latency: %f\n",My_Client_ID, num_executed, (sum / (double)num_executed));
   fflush(stdout);
-
-  /* fprintf(fp, "%f %d\n", (sum / (double)num_executed), num_executed);
-  fsync(fileno(fp)); */
 
   exit(0);
 }

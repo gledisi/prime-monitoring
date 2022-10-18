@@ -267,8 +267,7 @@ int32u VAL_Validate_Message(signed_message *message, int32u num_bytes)
     break;
 
   case PO_REQUEST:
-    if((!VAL_Validate_PO_Request((po_request_message *)content,
-				 num_content_bytes))) {
+    if((!VAL_Validate_PO_Request((po_request_message *)content,num_content_bytes))) {
       VALIDATE_FAILURE_LOG(message, num_bytes);
       return 0;
     }
@@ -957,6 +956,8 @@ int32u VAL_Validate_Update(update_message *update, int32u num_bytes)
 int32u VAL_Validate_PO_Request(po_request_message *po_request, int32u num_bytes)
 {
   signed_message *mess;
+  update_message *up;
+  operation_message *op;
   char *p;
   int32u i;
   int32u offset;
@@ -969,7 +970,7 @@ int32u VAL_Validate_PO_Request(po_request_message *po_request, int32u num_bytes)
   /* This is the start of the events contained in the PO-Request */
   p = (char *)(po_request + 1);
   offset = sizeof(po_request_message);
-
+  //TODO: reads events from the po_requests sends from other machines...
   for(i = 0; i < po_request->num_events; i++) {
     mess = (signed_message *)p;
     /* Check that there is enough space in the po-request for this update */
@@ -982,13 +983,11 @@ int32u VAL_Validate_PO_Request(po_request_message *po_request, int32u num_bytes)
       return 0;
     }
 
-    if(mess->type != UPDATE ||
-       !VAL_Validate_Message(mess, mess->len + sizeof(signed_message))) {
+    if(mess->type != UPDATE || !VAL_Validate_Message(mess, mess->len + sizeof(signed_message))) {
       Alarm(PRINT, "Event %d of PO-Request invalid\n", i);
       VALIDATE_FAILURE("Invalid update in PO-Request");
       return 0;
-    }
-    else {
+    }else {
       p += mess->len + sizeof(signed_message);
       offset += mess->len + sizeof(signed_message);
     }

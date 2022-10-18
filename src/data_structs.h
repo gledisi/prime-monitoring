@@ -64,11 +64,6 @@ typedef struct server_variables_dummy {
   int32u K;
 } server_variables;
 
-/* typedef struct configuration_variables_dummy {
-  int32u 
-  int32u  
-} configuration_variables; */
-
 typedef struct network_variables_dummy {
   int32    My_Address;
   int32u   program_type;
@@ -87,6 +82,7 @@ typedef struct network_variables_dummy {
 
   /* Stores the IP address of each server, read from configuration file  */
   int32 server_address[NUM_SERVER_SLOTS];
+  char server_address_name[NUM_SERVER_SLOTS][16];
 
 #ifdef SET_USE_SPINES
   channel  Spines_Channel;
@@ -215,7 +211,7 @@ typedef struct dummy_po_data_struct {
   stdhash History[NUM_SERVER_SLOTS];
 
   /* This is the highest sequence number (client update) from each replica that
-   * what we think the leader should know about. Essentially, its the highest
+   * what we think the leader should know about. Essentially, it's the highest
    * sequence number that 2f+k+1 have acked for that server. This is updated
    * either when we send a challenge (proof_matrix) or we get a pre-prepare
    * that is more up-to-date than we know (indicating the leader already knew
@@ -270,7 +266,7 @@ typedef struct dummy_po_data_struct {
    * DLL of messages */
   dll_struct ack_batch_dll;
 
-  /* If we try to execute a local commit but don't yet have all of
+  /* If we try to execute a local commit but don't yet have all
    * the PO-Requests that become eligible, we need to hold off on
    * executing.  When we hold off b/c of PO-Request (i, j), we'll
    * store a pointer to the ord_slot in Pending_Execution[i] --> j */
@@ -452,7 +448,7 @@ typedef struct dummy_ordering_data_struct {
   int32u recon_white_line;
 
   /* Seq num of the ordinal that is the current stable catchup point. This is
-   * useeful for the technique to ensure a full catchup history is present at 
+   * useful for the technique to ensure a full catchup history is present at
    * all replicas, even after they recover and/or jump. */
   int32u stable_catchup;
 

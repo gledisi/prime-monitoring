@@ -182,23 +182,24 @@ void Initialize_Listening_Socket()
 {
   struct sockaddr_in server_addr;
   long on = 1;
+  int32u port = PRIME_TCP_BASE_PORT + VAR.My_Server_ID;
 
-  if((NET.listen_sd = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    Alarm(EXIT, "socket error.\n");
+  if((NET.listen_sd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+      Alarm(EXIT, "socket error.\n");
+  }
   
-  if((setsockopt(NET.listen_sd, SOL_SOCKET, SO_REUSEADDR, &on,
-		 sizeof(on))) < 0) {
+  if((setsockopt(NET.listen_sd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &on,sizeof(on))) < 0) {
     perror("setsockopt");
     exit(0);
   }
 
+  Alarm(PRINT,"Listening to port %d",port);
   memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family      = AF_INET;
-  server_addr.sin_port        = htons(PRIME_TCP_BASE_PORT+VAR.My_Server_ID);
-  server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  server_addr.sin_port        = htons(port);
+  server_addr.sin_addr.s_addr = INADDR_ANY;
 
-  if((bind(NET.listen_sd, (struct sockaddr *)&server_addr, 
-        sizeof(server_addr))) < 0) {
+  if((bind(NET.listen_sd, (struct sockaddr *)&server_addr,sizeof(server_addr))) < 0) {
     perror("bind");
     exit(0);
   }
@@ -209,8 +210,7 @@ void Initialize_Listening_Socket()
   }
 
   /* Register the listening socket descriptor */
-  E_attach_fd(NET.listen_sd, READ_FD, NET_Client_Connection_Acceptor, 
-	      0, NULL, MEDIUM_PRIORITY);
+  E_attach_fd(NET.listen_sd, READ_FD, NET_Client_Connection_Acceptor,0, NULL, MEDIUM_PRIORITY);
 }
 #endif
 

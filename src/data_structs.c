@@ -38,7 +38,7 @@
  */
 
 /* data_structs.c: This file contains all globally defined data structures.
- * This corresponds closely to the datastructure section of the pseudocode. The
+ * This corresponds closely to the data structures section of the pseudocode. The
  * structures are defined in data_structs.h and the variables are defined here.
  * We also define initialization and utility functions. */
 
@@ -69,13 +69,11 @@ network_variables   NET;
 server_data_struct  DATA;
 benchmark_struct    BENCH;
 
-/* Data structure initialization funtions */
+/* Data structure initialization functions */
 
 void DAT_Initialize() 
 {
   int32u i;
-  /* signed_message *mess; */
-  /* char buf[128]; */
   
   /* VAR and NET get initialized elsewhere. */
   
@@ -110,17 +108,6 @@ void DAT_Initialize()
     BENCH.signature_types[i] = 0;
     BENCH.profile_count[i] = 0;
   }
-
-  /* sprintf(buf, "state_machine_out.%d.log", VAR.My_Server_ID);
-  if((BENCH.state_machine_fp = fopen(buf, "w")) == NULL) {
-    Alarm(PRINT, "Could not open file %s for writing.\n", buf);
-    exit(0);
-  } */
-
-  /* Send first PO-Request to tell everyone about my incarnation change */
-  /* mess = PRE_ORDER_Construct_Update(NEW_INCARNATION);
-  PROCESS_Message(mess);
-  dec_ref_cnt(mess); */
 
   Alarm(PRINT, "Initialized data structures.\n");
 }

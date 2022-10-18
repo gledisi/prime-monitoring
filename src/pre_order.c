@@ -55,6 +55,7 @@
 #include "recon.h"
 #include "validate.h"
 #include "proactive_recovery.h"
+#include "ic.h"
 
 /* Globally Accessible Variables */
 extern server_variables    VAR;
@@ -113,7 +114,7 @@ void PRE_ORDER_Periodic_Retrans(int d1, void *d2)
 
         /* This is a po-request I sent that didn't get enough acks yet */
         if (PRE_ORDER_Seq_Compare(p_slot->seq, DATA.PO.last_executed_po_reqs[VAR.My_Server_ID]) > 0) {
-            Alarm(DEBUG, "Retransmitting %u %u %x\n", p_slot->seq.incarnation, p_slot->seq.seq_num, p_slot->po_request);
+            Alarm(DEBUG, "Retransmitting %u %u %value\n", p_slot->seq.incarnation, p_slot->seq.seq_num, p_slot->po_request);
             UTIL_Broadcast(p_slot->po_request);
         }
 
@@ -160,44 +161,35 @@ void PRE_ORDER_Periodic_Retrans(int d1, void *d2)
 void PRE_ORDER_Process_Update(signed_message *update)
 {
   update_message *up_specific;
-  signed_message *payload;
+  operation_message *operation;
   po_seq_pair ps;
 
   /* Check if this update from this client is old */
   up_specific = (update_message*)(update+1);
-  payload = (signed_message *)(up_specific + 1);
-
-  Alarm(DEBUG, "PO_Process_Update: [%d,%d,%d]\n", up_specific->server_id, 
-                    update->incarnation, up_specific->seq_num);
+  operation = (operation_message *)(up_specific + 1);
+  Alarm(PRINT, "-----OPERATION----- [%d,%s]\n", operation->value,operation->key);
 
   //ps.incarnation = update->incarnation;
   //ps.seq_num = up_specific->seq_num;
  
-  if (update->machine_id == VAR.My_Server_ID && payload->type == CLIENT_STATE_TRANSFER
-        && update->incarnation == 0 && up_specific->seq_num == 0) 
-  {
-    Alarm(DEBUG, "Process_Update: Stamping %u incarnation to my message\n", 
-            DATA.PO.intro_client_seq[VAR.My_Server_ID].incarnation);
+  if (update->machine_id == VAR.My_Server_ID && update->incarnation == 0 && up_specific->seq_num == 0){
+    Alarm(DEBUG, "Process_Update: Stamping %u incarnation to my message\n",DATA.PO.intro_client_seq[VAR.My_Server_ID].incarnation);
     ps = DATA.PO.intro_client_seq[VAR.My_Server_ID];
     ps.seq_num++;
     update->incarnation = ps.incarnation;
     up_specific->seq_num = ps.seq_num;
     UTIL_RSA_Sign_Message(update);
-  }
-  else {
+  }else {
     ps.incarnation = update->incarnation;
     ps.seq_num = up_specific->seq_num;
   }
 
-  if (PRE_ORDER_Seq_Compare(ps, DATA.PO.intro_client_seq[up_specific->server_id]) <= 0) 
-  {
-    Alarm(PRINT, "Duplicate client message [%d,%d,%d]\n", up_specific->server_id, 
-            update->incarnation, up_specific->seq_num);
+  if (PRE_ORDER_Seq_Compare(ps, DATA.PO.intro_client_seq[up_specific->server_id]) <= 0){
+    Alarm(PRINT, "Duplicate client message [%d,%d,%d]\n", up_specific->server_id,update->incarnation, up_specific->seq_num);
     return;
   }
 
   DATA.PO.intro_client_seq[up_specific->server_id] = ps;
-
   /* Add the update to the outgoing po_request list. Normally, we add updates to the end
    * of the DLL. But if we are in recovery*/
   if (update->machine_id == VAR.My_Server_ID && update->monotonic_counter > 0 &&
@@ -246,11 +238,10 @@ void PRE_ORDER_Send_PO_Request()
     /* Build a new PO_Request */
     po_request = PRE_ORDER_Construct_PO_Request();
     
-    /* This is the special case where we are recovering but we are not
+    /* This is the special case where we are recovering, but we are not
      * yet ready to send off our first PO_Request with our TPM-signed update */
     if (po_request == NULL) {
-        Alarm(PRINT, "Send_PO_Request: first update NOT ready. state=%u\n",
-                DATA.PR.recovery_status[VAR.My_Server_ID]);
+        Alarm(PRINT, "Send_PO_Request: first update NOT ready. state=%u\n",DATA.PR.recovery_status[VAR.My_Server_ID]);
         break;
     }
 
@@ -268,12 +259,8 @@ void PRE_ORDER_Send_PO_Request()
     }
 
     /* Add it to the list of messages to be signed*/
-    Alarm(DEBUG, "Adding PO (%d, %d, %d) to pending messages\n", 
-        po_request->machine_id, 
-        ((po_request_message *)(po_request + 1))->seq.incarnation,
-        ((po_request_message *)(po_request + 1))->seq.seq_num);
-    SIG_Add_To_Pending_Messages(po_request, dest_bits, 
-				UTIL_Get_Timeliness(PO_REQUEST));
+    Alarm(DEBUG, "Adding PO (%d, %d, %d) to pending messages\n",po_request->machine_id,((po_request_message *)(po_request + 1))->seq.incarnation,((po_request_message *)(po_request + 1))->seq.seq_num);
+    SIG_Add_To_Pending_Messages(po_request, dest_bits,UTIL_Get_Timeliness(PO_REQUEST));
     dec_ref_cnt(po_request);
     counter++;
 
@@ -306,17 +293,14 @@ void PRE_ORDER_Process_PO_Request(signed_message *po_request)
   po_request_specific = (po_request_message*)(po_request+1);
 
   /* If we've already garbage collected this slot, don't do anything */
-  if(PRE_ORDER_Seq_Compare(po_request_specific->seq, 
-        DATA.PO.white_line[po_request->machine_id]) <= 0) 
-  {
-    Alarm(DEBUG, "Discarding PO-Request %d %d %d, already gc\n",
+  if(PRE_ORDER_Seq_Compare(po_request_specific->seq,DATA.PO.white_line[po_request->machine_id]) <= 0){
+    Alarm(PRINT, "Discarding PO-Request %d %d %d, already gc\n",
       po_request->machine_id, po_request_specific->seq.incarnation,
       po_request_specific->seq.seq_num);
     return;
   }
 
-  assert((po_request->machine_id >= 1) &&
-     (po_request->machine_id <= NUM_SERVERS));
+  assert((po_request->machine_id >= 1) && (po_request->machine_id <= NUM_SERVERS));
 
   /* If this po_request is from an incarnation that is actually higher than
    * what we've preinstalled for the originating replica, discard it */
@@ -364,7 +348,6 @@ void PRE_ORDER_Process_PO_Request(signed_message *po_request)
   PRE_ORDER_Update_Cum_ARU(po_request->machine_id);
 
   slot->num_events = po_request_specific->num_events;
-
   /* Moved to Cum_ARU function */
   /* See if we were missing this PO-Request when it became eligible for
    * local execution.  If so, mark that we have it.  Then, if this means
@@ -537,9 +520,7 @@ void PRE_ORDER_Process_PO_Ack_Part(po_ack_part *part, signed_message *po_ack)
     /* First, check if the preinstalled vector on this ack part matches
      * my knowledge of the preinstalled incarnations of each of the replicas.
      * Only accept this message if this check succeeds */
-    if (memcmp(po_ack_specific->preinstalled_incarnations, 
-                vector_ptr,
-                NUM_SERVERS * sizeof(int32u)) != 0) 
+    if (memcmp(po_ack_specific->preinstalled_incarnations,vector_ptr,NUM_SERVERS * sizeof(int32u)) != 0)
     {
 
         if(PRE_ORDER_Seq_Compare(part->seq, DATA.PO.white_line[part->originator]) <= 0) 
@@ -577,8 +558,7 @@ void PRE_ORDER_Process_PO_Ack_Part(po_ack_part *part, signed_message *po_ack)
     }
 
     /* If we haven't garbage collected this slot yet, we need to store it. Otherwise, skip it */
-    if(PRE_ORDER_Seq_Compare(part->seq, 
-            DATA.PO.white_line[part->originator]) > 0) 
+    if(PRE_ORDER_Seq_Compare(part->seq,DATA.PO.white_line[part->originator]) > 0)
     {
         slot = UTIL_Get_PO_Slot(part->originator, part->seq);
         if(!slot->ack_received[sender]) {
@@ -947,12 +927,11 @@ void PRE_ORDER_Send_Proof_Matrix()
      * The message will be sent only to the leader. */
     dest_bits = 0;
     UTIL_Bitmap_Set(&dest_bits, UTIL_Leader());
-    SIG_Add_To_Pending_Messages(mset[i], dest_bits, 
-				UTIL_Get_Timeliness(PROOF_MATRIX));
+    SIG_Add_To_Pending_Messages(mset[i], dest_bits,UTIL_Get_Timeliness(PROOF_MATRIX));
     dec_ref_cnt(mset[i]);
   }
 
-  /* Mark that we've just sent a proof matrix so we don't do it again
+  /* Mark that we've just sent a proof matrix, so we don't do it again
    * for while. */
   UTIL_Stopwatch_Start(&DATA.PO.proof_matrix_sw);
 }
@@ -1011,7 +990,7 @@ po_seq_pair PRE_ORDER_Proof_ARU(int32u server, po_aru_signed_message *proof)
 
   /* Now, start marching through the sorted array, and find out if we
    * have at least 2f+k+1 matching incarnation values. If so, our job
-   * is to setup a Left and Right endmark, which indicates the range
+   * is to set up a Left and Right end-mark, which indicates the range
    * of entries that we should consider when choosing the `2f+k+1`th 
    * from the top. */
   

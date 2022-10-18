@@ -87,7 +87,6 @@ signed_message* PRE_ORDER_Construct_PO_Request()
   /* Fill in the message based on the event. We construct a message
    * that contains the event by copying the event (which may or may
    * not be a signed message) into the PO Request message. */
-  
   po_request->machine_id       = VAR.My_Server_ID;
   po_request->incarnation      = DATA.PR.new_incarnation_val[VAR.My_Server_ID];
   po_request->type             = PO_REQUEST;
@@ -107,7 +106,6 @@ signed_message* PRE_ORDER_Construct_PO_Request()
 
   /* We'll be adding to at least this many bytes */
   bytes = sizeof(signed_message) + sizeof(po_request_message);
-  
   num_events = 0;
 
   /* When we copy, we'll be starting right after the PO request */
@@ -119,8 +117,7 @@ signed_message* PRE_ORDER_Construct_PO_Request()
 
     wa_bytes = 0;
 
-    /* If there are no more messages, stop. Otherwise grab one and see
-     * if it will fit. */
+    /* If there are no more messages, stop. Otherwise, grab one and see if it will fit. */
     if((mess = UTIL_DLL_Front_Message(&DATA.PO.po_request_dll)) == NULL)
       break;
 
@@ -128,8 +125,7 @@ signed_message* PRE_ORDER_Construct_PO_Request()
       up = (update_message *)(mess + 1);
       assert(up->seq_num == 1);
     } */
-      
-    this_mess_len = mess->len + sizeof(signed_message) + wa_bytes;
+      this_mess_len = mess->len + sizeof(signed_message) + wa_bytes;
 
     if((bytes + this_mess_len) < cutoff) {
       num_events++;
@@ -146,10 +142,8 @@ signed_message* PRE_ORDER_Construct_PO_Request()
         po_request->monotonic_counter = 1;
         break;
       }
-    }
-    else {
-      Alarm(DEBUG, "Won't fit: this_mess_len = %d, type = %d, wa = %d\n", 
-	    this_mess_len, mess->type, wa_bytes);
+    }else {
+      Alarm(DEBUG, "Won't fit: this_mess_len = %d, type = %d, wa = %d\n",this_mess_len, mess->type, wa_bytes);
       break;
     }
   }
@@ -704,8 +698,7 @@ signed_message* PRE_ORDER_Construct_PO_ARU()
   return po_aru;
 }
 
-void PRE_ORDER_Construct_Proof_Matrix(signed_message **mset,
-				      int32u *num_parts)
+void PRE_ORDER_Construct_Proof_Matrix(signed_message **mset,int32u *num_parts)
 {
     signed_message *mess;
     proof_matrix_message *pm_specific;
@@ -2211,10 +2204,7 @@ signed_message *PR_Construct_Reset_Certificate()
     return rc;
 }
 
-
-
-signed_message *RECON_Construct_Recon_Erasure_Message(dll_struct *list,
-						      int32u *more_to_encode)
+signed_message *RECON_Construct_Recon_Erasure_Message(dll_struct *list,int32u *more_to_encode)
 {
   signed_message *mess;
   erasure_part *part;

@@ -130,7 +130,7 @@ void Load_Addrs_From_File(char *fileName, int32 addrs[NUM_SERVER_SLOTS])
   int32u num_assigned, num_expected;
   int32u server;
   int32 ip1,ip2,ip3,ip4;
-  
+  char ip[16];
   /* Initialize data structure with 0s */
   for (server = 0; server < NUM_SERVER_SLOTS; server++)
     addrs[server] = 0;
@@ -161,7 +161,8 @@ void Load_Addrs_From_File(char *fileName, int32 addrs[NUM_SERVER_SLOTS])
 
     /* Correctly formatted input. Store the address */
     addrs[server] = ((ip1 << 24 ) | (ip2 << 16) | (ip3 << 8) | ip4);
-
+    sprintf(ip, "%d.%d.%d.%d", ip1,ip2,ip3,ip4);
+    strcpy(NET.server_address_name[server],ip);
     /* Read next line */
     num_assigned = fscanf(f,"%d %d.%d.%d.%d", &server, &ip1, &ip2, &ip3, &ip4);
   }
@@ -756,21 +757,16 @@ void UTIL_Send_To_Server(signed_message *mess, int32u server_id)
   address = UTIL_Get_Server_Address(server_id);
 
   if(UTIL_Get_Timeliness(mess->type) == RECON_TRAFFIC_CLASS)
-    ret = DL_send(NET.Recon_Channel, address, 
-		  PRIME_RECON_SERVER_BASE_PORT + server_id, &scat);
+    ret = DL_send(NET.Recon_Channel, address,PRIME_RECON_SERVER_BASE_PORT + server_id, &scat);
   else if(UTIL_Get_Timeliness(mess->type) == TIMELY_TRAFFIC_CLASS) {
-    ret = DL_send(NET.Timely_Channel, address, 
-		  PRIME_TIMELY_SERVER_BASE_PORT + server_id, &scat);
+    ret = DL_send(NET.Timely_Channel, address,PRIME_TIMELY_SERVER_BASE_PORT + server_id, &scat);
   } else {
     assert(UTIL_Get_Timeliness(mess->type) == BOUNDED_TRAFFIC_CLASS);
-    ret = DL_send(NET.Bounded_Channel, address,
-		  PRIME_BOUNDED_SERVER_BASE_PORT + server_id, &scat);
+    ret = DL_send(NET.Bounded_Channel, address,PRIME_BOUNDED_SERVER_BASE_PORT + server_id, &scat);
   }
 
   if(ret <= 0) {
-    Alarm(PRINT, "I thought message len was: %d\n",
-	  mess->len + sizeof(signed_message) + 
-	  MT_Digests_(mess->mt_num) * DIGEST_SIZE);
+    Alarm(PRINT, "I thought message len was: %d\n",mess->len + sizeof(signed_message) + MT_Digests_(mess->mt_num) * DIGEST_SIZE);
     Alarm(EXIT, "UTIL_Send_To_Server: socket error\n");
   }
 
@@ -1039,13 +1035,12 @@ po_slot* UTIL_Get_PO_Slot(int32u server_id, po_seq_pair ps)
 
     /* Allocate memory for a slot. */
     if((slot = (po_slot *) new_ref_cnt(PO_SLOT_OBJ)) == NULL) {
-      Alarm(EXIT,"DAT_Get_Pending_Slot:"
-	    " Could not allocate memory for slot.\n");
+      Alarm(EXIT,"DAT_Get_Pending_Slot: Could not allocate memory for slot.\n");
     }
     memset((void*)slot, 0, sizeof(po_slot));
     slot->seq = ps;
 
-    /* insert this slot in the hash */
+    /* prime_insert this slot in the hash */
     stdhash_insert(h, NULL, &ps, &slot);
   } 
   else
@@ -1091,7 +1086,7 @@ ord_slot *UTIL_Get_ORD_Slot(int32u seq_num)
     if((slot = (ord_slot *)new_ref_cnt(ORD_SLOT_OBJ)) == NULL)
       Alarm(EXIT,"Could not allocate memory for ord slot.\n");
 
-    /* insert this slot in the hash */
+    /* prime_insert this slot in the hash */
     memset( (void*)slot, 0, sizeof(ord_slot) );
 
     slot->seq_num = seq_num; 
@@ -1178,7 +1173,7 @@ recon_slot *UTIL_Get_Recon_Slot(int32u originator, po_seq_pair ps)
 
     memset((void*)slot, 0, sizeof(*slot));
 
-    /* insert this slot in the hash */
+    /* prime_insert this slot in the hash */
     stdhash_insert(h, NULL, &ps, &slot);
   } 
   else
@@ -1187,8 +1182,7 @@ recon_slot *UTIL_Get_Recon_Slot(int32u originator, po_seq_pair ps)
   return slot;
 }
 
-recon_slot *UTIL_Get_Recon_Slot_If_Exists(int32u originator, 
-					  po_seq_pair ps)
+recon_slot *UTIL_Get_Recon_Slot_If_Exists(int32u originator,po_seq_pair ps)
 { 
   recon_slot *slot;
   stdit it;
@@ -1231,7 +1225,7 @@ rb_slot* UTIL_Get_RB_Slot(int32u server_id, int32u seq_num)
     slot->seq_num = seq_num;
     slot->state = INIT;
 
-    /* insert this slot in the hash */
+    /* prime_insert this slot in the hash */
     stdhash_insert(h, NULL, &seq_num, &slot);
   } 
   else
@@ -1260,7 +1254,6 @@ rb_slot* UTIL_Get_RB_Slot_If_Exists(int32u server_id, int32u seq_num)
   return slot;
 }
 
-
 int32u UTIL_Leader() 
 {
   return UTIL_Leader_Of_View(DATA.View);
@@ -1272,7 +1265,6 @@ int32u UTIL_Leader()
 
   return rep; */
 }
-
 
 int32u UTIL_I_Am_Leader() 
 {
@@ -1354,8 +1346,7 @@ int32u UTIL_Bitmap_Is_Superset(int32u *bm_old, int32u *bm_new)
     return 0;
 }
 
-erasure_node *UTIL_New_Erasure_Node(int32u dest_bits, int32u type, 
-				    int32u part_len, int32u mess_len)
+erasure_node *UTIL_New_Erasure_Node(int32u dest_bits, int32u type,int32u part_len, int32u mess_len)
 {
   erasure_node *n;
 
@@ -1384,8 +1375,7 @@ erasure_part_obj *UTIL_New_Erasure_Part_Obj()
 void UTIL_Respond_To_Client(int32u machine_id, int32u incarnation, 
                             int32u seq_num, int32u ord_num,
                             int32u event_idx, int32u event_tot, 
-                            byte content[UPDATE_SIZE])
-{
+                            byte content[UPDATE_SIZE]){
   signed_message *mess;
   
   mess = ORDER_Construct_Client_Response(machine_id, incarnation, seq_num, 
@@ -1395,7 +1385,8 @@ void UTIL_Respond_To_Client(int32u machine_id, int32u incarnation,
   /* For Benchmarking Prime, we sign client responses. In Prime for SCADA,
    * with the clients on the same machines as the Prime replicas, we don't need
    * to sign the client responses */
-  /* SIG_Add_To_Pending_Messages(mess, 0, 0); */
+  //TODO: G-comment for clients on the same machine
+  //SIG_Add_To_Pending_Messages(mess, 0, 0);
   UTIL_Write_Client_Response(mess);
   dec_ref_cnt(mess);
 }
@@ -1410,8 +1401,8 @@ void UTIL_Write_Client_Response(signed_message *mess)
   machine_id = response->machine_id;
 
   size = UTIL_Message_Size(mess);
-  Alarm(DEBUG, "Getting ready to write %d bytes to client %d seq %d\n", 
-	size, machine_id, response->seq_num);
+  Alarm(PRINT, "Getting ready to write %d bytes to client %d seq %d. type %s \n",size, machine_id, response->seq_num,
+        UTIL_Type_To_String(mess->type));
 
   /* if(NET.client_sd[machine_id] == 0) {
     Alarm(PRINT, "Unable to write reply to client %d, no open connection.\n",
@@ -1476,8 +1467,7 @@ net_struct *UTIL_New_Net_Struct()
   return n;
 }
 
-int32u NET_Add_To_Pending_Messages(signed_message *mess, int32u dest_bits,
-				   int32u timeliness)
+int32u NET_Add_To_Pending_Messages(signed_message *mess, int32u dest_bits,int32u timeliness)
 {
   net_struct *n;
   int32u i;

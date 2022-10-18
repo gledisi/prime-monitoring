@@ -147,8 +147,7 @@ void UTIL_DLL_Add_Data( dll_struct *dll, void *data ) {
   dll_node_struct *node;
  
   if((node = (dll_node_struct*)new_ref_cnt(DLL_NODE_OBJ))==NULL) {
-    Alarm(EXIT,"UTIL_DLL_Add_Data:"
-	  " Could not allocate memory for slot.\n");
+    Alarm(EXIT,"UTIL_DLL_Add_Data:"" Could not allocate memory for slot.\n");
   }
 
   if ( dll->end != NULL ) {

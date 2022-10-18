@@ -434,8 +434,7 @@ void PR_Start_Recovery()
     DATA.PR.new_incarnation[VAR.My_Server_ID] = PR_Construct_New_Incarnation_Message();
 
     /* Multicast my new_incarnation message */ 
-    SIG_Add_To_Pending_Messages(DATA.PR.new_incarnation[VAR.My_Server_ID], BROADCAST, 
-        UTIL_Get_Timeliness(NEW_INCARNATION));
+    SIG_Add_To_Pending_Messages(DATA.PR.new_incarnation[VAR.My_Server_ID], BROADCAST,UTIL_Get_Timeliness(NEW_INCARNATION));
 }
 
 void PR_Process_New_Incarnation(signed_message *mess)
@@ -456,8 +455,7 @@ void PR_Process_New_Incarnation(signed_message *mess)
 
     /* Grab the specific new_incarnation information */
     ni = (new_incarnation_message *)(mess + 1);
-    Alarm(DEBUG, "Received NEW_INCARNATION from %d with incarnation %u and timestamp = %u\n", 
-            mess->machine_id, mess->incarnation, ni->timestamp);
+    Alarm(DEBUG, "Received NEW_INCARNATION from %d with incarnation %u and timestamp = %u\n",mess->machine_id, mess->incarnation, ni->timestamp);
 
     /* Check the monotonic increasing sequence number */
     /*if (ni->monotonic_counter <= DATA.PR.monotonic_counter[sender]) {
@@ -479,20 +477,17 @@ void PR_Process_New_Incarnation(signed_message *mess)
     /* PRTODO: validate the message accordingly
      * Throw away if too old for one of several reasons */
     if (mess->incarnation <= DATA.PR.preinstalled_incarnations[sender]) {
-        Alarm(DEBUG, "Old new_incarnation (%u), already Preinstalled %u\n", 
-                mess->incarnation, DATA.PR.preinstalled_incarnations[sender]);
+        Alarm(DEBUG, "Old new_incarnation (%u), already Preinstalled %u\n",mess->incarnation, DATA.PR.preinstalled_incarnations[sender]);
         return;
     }
     if (stored_ni != NULL && mess->incarnation < (DATA.PR.new_incarnation[sender])->incarnation) {
-        Alarm(DEBUG, "Old new_incarnation (%u), already working on %u\n", 
-                mess->incarnation, (DATA.PR.new_incarnation[sender])->incarnation);
+        Alarm(DEBUG, "Old new_incarnation (%u), already working on %u\n",mess->incarnation, (DATA.PR.new_incarnation[sender])->incarnation);
         return;
     }
     if (stored_ni != NULL && mess->incarnation == (DATA.PR.new_incarnation[sender])->incarnation) {
 
-        /* Ensure session key matches if you've already recevied this incarnation  */
-        if (memcmp(ni->key, stored_ni->key, DIGEST_SIZE) != 0)
-        {
+        /* Ensure session key matches if you've already received this incarnation  */
+        if (memcmp(ni->key, stored_ni->key, DIGEST_SIZE) != 0){
             Alarm(PRINT, "Recv Two New_Incarnation with non-matching key! Malicious Proof!\n");
             /* Blacklist */
             return;
@@ -500,15 +495,13 @@ void PR_Process_New_Incarnation(signed_message *mess)
 
         /* See if enough time has passed to give support for this new_incarnation message */
         if (ni->timestamp <= stored_ni->timestamp) {
-            Alarm(DEBUG, "ni->timestamp is old %u, already have %u\n", 
-                    ni->timestamp, stored_ni->timestamp);
+            Alarm(DEBUG, "ni->timestamp is old %u, already have %u\n",ni->timestamp, stored_ni->timestamp);
             return;
         }
 
         diff = ni->timestamp - stored_ni->timestamp;
         if (diff < (int32u)RECOVERY_UPDATE_TIMESTAMP_SEC) {
-            Alarm(PRINT, "ni->timestamp from %u is too recent. ni = %u, stored = %u\n",
-                    sender, ni->timestamp, stored_ni->timestamp);
+            Alarm(PRINT, "ni->timestamp from %u is too recent. ni = %u, stored = %u\n",sender, ni->timestamp, stored_ni->timestamp);
             return;
         }
     }
@@ -536,8 +529,7 @@ void PR_Process_New_Incarnation(signed_message *mess)
     DATA.PR.highest_recv_incarnation[sender] = mess; */
 
     /* Check if this replica is allowed to recover again (from my point of view) */
-    if (mess->incarnation > DATA.PR.new_incarnation_val[sender] && 
-        ni->timestamp - DATA.PR.last_recovery_time[sender] < (int32u)RECOVERY_PERIOD_SEC) 
+    if (mess->incarnation > DATA.PR.new_incarnation_val[sender] && ni->timestamp - DATA.PR.last_recovery_time[sender] < (int32u)RECOVERY_PERIOD_SEC)
     {
         Alarm(PRINT, "Replica %d trying to recover too soon! msg = [%u,%u], previous = [%u,%u]\n", 
                 sender, mess->incarnation, ni->timestamp, 
@@ -548,7 +540,7 @@ void PR_Process_New_Incarnation(signed_message *mess)
         return;
     }
 
-    /* If we previously did not know they were starting up and they have a higher
+    /* If we previously did not know they were starting up, and they have a higher
      * incarnation, we can mark them as doing startup as long as we are in the 
      * RESET, RECOVERY, or NORMAL case */
     if (DATA.PR.new_incarnation_val[sender] < mess->incarnation &&
@@ -559,7 +551,7 @@ void PR_Process_New_Incarnation(signed_message *mess)
         DATA.PR.recovery_status[sender] = PR_STARTUP;
         Alarm(PRINT, "Num_Startup == %u\n", DATA.PR.num_startup);
         if (DATA.PR.num_startup >= VAR.F + VAR.K + 1) {
-            Alarm(PRINT, "SYSTEM ASSUMPTIONS VOLATED: >= f+k+1 in startup\n");
+            Alarm(PRINT, "SYSTEM ASSUMPTIONS VIOLATED: >= f+k+1 in startup\n");
             //PR_Send_Application_Reset();   // REDUNDANT FOR NOW...
             PR_Reset_Prime();
             return;   // PRTODO: This return is new - *should* be correct, need to check more
@@ -810,10 +802,10 @@ void PR_Accept_Incarnation(int32u replica)
             stdit_next(&it);
         }
 
-        /* NOT NEEDED FOR NOW- since we are sending from cum_aru+1 to present
+        /* NOT NEEDED FOR NOW-since we are sending from cum_aru+1 to present
          * after we just cleared things out */
-        /* If I've sent acks for anything above the cum_aru for this replica, 
-         * I need to roll back that knowledge in order to resend the acks again
+        /* If I've sent ack-s for anything above the cum_aru for this replica,
+         * I need to roll back that knowledge in order to resend the ack-s again
          * with the new preinstalled incarnation vector.
          * NOTE: if we have yet to preorder anything from the new incarnation
          * yet for this replica, cum_aru will have an old incarnation. Do not
@@ -862,7 +854,7 @@ void PR_Accept_Incarnation(int32u replica)
         if (!o_slot->ordered) {
             for (j = 1; j <= NUM_SERVERS; j++) {
  
-                /* Whether or not we have a prepare certificate, we will be replacing
+                /* Whether we have a prepared certificate, we will be replacing
                  * our "weak" stored prepare (in the slot->prepare array) with a new one
                  * that has the new preinstalled vector on it, in case there are other
                  * replicas that need it to complete their prepare cert. The only
@@ -971,7 +963,7 @@ void PR_Accept_Incarnation(int32u replica)
     if (E_in_queue(ORDER_Periodic_Retrans, 0, NULL))
         E_queue(ORDER_Periodic_Retrans, 0, NULL, t);
     
-    /* Multicast Catchup Request. This is for the case where some replcias
+    /* Multicast Catchup Request. This is for the case where some replicas
      * may have finished a certificate on a PO_Ack or Prepare/Commit before
      * this Incarnation Cert was applied, but you did not. They will not
      * resend those items with the new vector because they already have the
@@ -1174,7 +1166,7 @@ void PR_Check_Complete_Pending_State(int32u replica)
     pending_state_message *psm;
 
     /* If we don't have the pending_state message from this replica, we cannot
-     * proceed to see if we have all of the shares yet */
+     * proceed to see if we have all the shares yet */
     if (DATA.PR.pending_state[replica] == NULL)
         return;
 
@@ -1195,7 +1187,6 @@ void PR_Check_Complete_Pending_State(int32u replica)
     DATA.PR.complete_pending_state[replica] = 1;
     Alarm(PRINT, "Complete_Pending_State from %u\n", replica);
 }
-
 
 void PR_Try_To_Complete_Recovery(int32u recent_replica)
 {
@@ -1247,7 +1238,7 @@ void PR_Try_To_Complete_Recovery(int32u recent_replica)
         return;
 
     /* Now, go through the at least 2f+k+1 jump messages that match the digest 
-     * AKA global incarnation we are interseted in, and find the highest advanced
+     * AKA global incarnation we are interested in, and find the highest advanced
      * one to jump to */
     max_ord = 0;
     jump_targ = 0;
@@ -1280,7 +1271,7 @@ void PR_Try_To_Complete_Recovery(int32u recent_replica)
     /* We have finished collecting what we need for recovery */
     DATA.PR.complete_recovery_state = 1;
 
-    /* We have the jump message we will use, setup the pointers to the
+    /* We have the jump message we will use, set up the pointers to the
      * different message parts */
     jm = (jump_message *)(DATA.PR.jump_message[jump_targ] + 1);
     Alarm(PRINT, "PR_Try_To_Complete_Recovery: Moving to ordinal %u\n", max_ord); 
@@ -1370,7 +1361,7 @@ void PR_Send_Pending_State(int32u target, int32u acked_nonce)
     UTIL_Bitmap_Set(&dest_bits, target);
 
     /* PRTODO: Sanity check here to make sure that the outbound_share_dll is empty
-     * for the target. What if its not? Give up on the old pending state xfer and
+     * for the target. What if it's not? Give up on the old pending state xfer and
      * start anew? Make sure we are rate limiting */
     if (!UTIL_DLL_Is_Empty(&DATA.PR.outbound_pending_share_dll[target]))
         UTIL_DLL_Clear(&DATA.PR.outbound_pending_share_dll[target]);
@@ -1449,7 +1440,7 @@ void PR_Process_Reset_Vote(signed_message *mess)
     /* If this is the first time getting a vote from this sender, increase count */
     if (DATA.PR.reset_vote[sender] == NULL)
         DATA.PR.reset_vote_count++;
-    /* Otherwise, delete the old version which will be replaced */
+    /* Otherwise, prime_delete the old version which will be replaced */
     else 
         dec_ref_cnt(DATA.PR.reset_vote[sender]);
     inc_ref_cnt(mess);
@@ -2505,12 +2496,10 @@ void PR_Process_Reset_Certificate(signed_message *mess)
     //PR_Resume_Normal_Operation(RESET_APPLICATION);
 }
 
-void PR_Resume_Normal_Operation()
-//void PR_Resume_Normal_Operation(int32u reset_app_flag)
-{
+void PR_Resume_Normal_Operation(){
     /* Send the RESET client message to the application if we are coming
      * from the system reset (or startup) case. Otherwise, we are just
-     * completing a recovery, ignore sending this update since normal 
+     * completing a recovery, ignore sending this update since normal
      * STATE TRANSFER will be used */
     //if (reset_app_flag == RESET_APPLICATION)
     //    PR_Send_Application_Reset();

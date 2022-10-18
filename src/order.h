@@ -43,8 +43,7 @@
 #include "packets.h"
 #include "data_structs.h"
 
-/* What triggers us to call Send_One_Pre_Prepare: either the timer or
- * a PO-ARU message */
+/* What triggers us to call Send_One_Pre_Prepare: either the timer or a PO-ARU message */
 #define TIMEOUT_CALLER 1
 #define MESSAGE_CALLER 2
 
@@ -63,8 +62,7 @@ void ORDER_Execute_Commit(ord_slot *slot);
 void ORDER_Initialize_Data_Structure (void);
 void ORDER_Upon_Reset (void);
 
-int32u ORDER_Commit_Matches_Pre_Prepare(signed_message *commit,
-                    complete_pre_prepare_message *pp);
+int32u ORDER_Commit_Matches_Pre_Prepare(signed_message *commit,complete_pre_prepare_message *pp);
 
 void ORDER_Process_Pre_Prepare  (signed_message *mess);
 void ORDER_Process_Prepare      (signed_message *mess);

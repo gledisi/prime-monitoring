@@ -59,6 +59,10 @@
 /* Number of bytes in a client update */
 #define UPDATE_SIZE 300
 
+/* Database name */
+#define DB_NAME "prime_db"
+#define TABLE_NAME "server_data"
+
 /* When running a benchmark, this value indicates how many updates
  * should be executed by the servers before stopping and outputting
  * the throughput. */
@@ -112,7 +116,7 @@
  * same physical machine. Using Inter-Process Communication will speed up 
  * (in terms of latency) messaging between the client and replica when
  * sending messages with more than just a few bytes */
-#define USE_IPC_CLIENT 1
+#define USE_IPC_CLIENT 0
 #define REPLICA_IPC_PATH "/tmp/prime_replica"
 #define CLIENT_IPC_PATH "/tmp/prime_client"
 

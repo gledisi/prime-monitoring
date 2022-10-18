@@ -108,7 +108,7 @@ int NET_Write(int sd, void *dummy_buf, int32u nBytes)
     }
 
     if(ret == 0) {
-      Alarm(DEBUG, "Write returned 0...\n");
+      Alarm(PRINT, "Write returned 0...\n");
       break;
     }
 

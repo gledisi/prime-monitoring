@@ -57,14 +57,18 @@ enum packet_types {DUMMY,
            RB_INIT, RB_ECHO, RB_READY,
            REPORT, PC_SET, VC_LIST, VC_PARTIAL_SIG, VC_PROOF,
            REPLAY, REPLAY_PREPARE, REPLAY_COMMIT,
-           ORD_CERT, PO_CERT, CATCHUP_REQUEST, JUMP,
+           ORD_CERT, PO_CERT, CATCHUP_REQUEST,
+           /* PROACTIVE_RECOVERY */
+           JUMP,
            NEW_INCARNATION, INCARNATION_ACK, INCARNATION_CERT,
            PENDING_STATE, PENDING_SHARE,
            RESET_VOTE, RESET_SHARE,
            RESET_PROPOSAL, RESET_PREPARE, RESET_COMMIT,
            RESET_NEWLEADER, RESET_NEWLEADERPROOF, 
            RESET_VIEWCHANGE, RESET_NEWVIEW, RESET_CERT,
-		   /* 46 --> */ UPDATE, CLIENT_RESPONSE, 
+           /* PROACTIVE_RECOVERY */
+		   /* 46 --> */ UPDATE,
+           CLIENT_RESPONSE,
            MAX_MESS_TYPE};
 
 /* Defines to help with SCADA application */
@@ -91,10 +95,9 @@ typedef struct dummy_signed_message {
 
   int32u incarnation;          /* set for session-key-signed messages */
   int32u monotonic_counter;    /* set for TPM-signed messages */
-  
-  /* int32u seq_num; */
 
   /* Content of message follows */
+
 } signed_message;
 
 /* Update content. Note that an update message has almost the same
@@ -106,10 +109,16 @@ typedef struct dummy_update_message {
   int32u server_id;
   int32  address;
   int16  port;
-  //int32u incarnation;
   int32u seq_num;
   /* the update content follows */
 } update_message;
+
+/* Used for operation that client issues to the server */
+typedef struct dummy_operation_message {
+    int32u type;      /* type of the operation (CREATE,UPDATE,DELETE) */
+    char key[50];
+    int value;
+} operation_message;
 
 typedef struct dummy_signed_update_message {
   signed_message header;
@@ -452,9 +461,6 @@ typedef struct dummy_reset_certificate_message {
   /* reset certificate follows: 1 reset_proposal and 2f+k+1 reset_commits */
 } reset_certificate_message;
 
-
-
-
 typedef struct dummy_erasure_part {
 
   /* Length of the message this part is encoding, in bytes.  The receiver
@@ -484,14 +490,13 @@ typedef struct dummy_commit_certificate {
     signed_message* commit[NUM_SERVER_SLOTS]; /* The set of prepares */
 } commit_certificate_struct;
 
-signed_message* PRE_ORDER_Construct_PO_Request  (void);
-signed_message* PRE_ORDER_Construct_PO_Ack      (int32u *more_to_ack, int32u send_all_non_preordered);
-signed_message* PRE_ORDER_Construct_PO_ARU      (void);
-void PRE_ORDER_Construct_Proof_Matrix(signed_message **mset, 
-				      int32u *num_parts);
+signed_message* PRE_ORDER_Construct_PO_Request(void);
+signed_message* PRE_ORDER_Construct_PO_Ack(int32u *more_to_ack, int32u send_all_non_preordered);
+signed_message* PRE_ORDER_Construct_PO_ARU(void);
+void            PRE_ORDER_Construct_Proof_Matrix(signed_message **mset,int32u *num_parts);
 signed_message *PRE_ORDER_Construct_Update(int32u type);
 
-void ORDER_Construct_Pre_Prepare(signed_message **mset, int32u *num_parts);
+void            ORDER_Construct_Pre_Prepare(signed_message **mset, int32u *num_parts);
 signed_message* ORDER_Construct_Prepare(complete_pre_prepare_message *pp);
 signed_message* ORDER_Construct_Commit (complete_pre_prepare_message *pp);
 signed_message* ORDER_Construct_Client_Response(int32u client_id, int32u incarnation, 
@@ -539,6 +544,5 @@ signed_message* PR_Construct_Reset_ViewChange(void);
 signed_message* PR_Construct_Reset_NewView(void);
 signed_message* PR_Construct_Reset_Certificate(void);
 
-signed_message *RECON_Construct_Recon_Erasure_Message(dll_struct *list,
-							int32u *more_to_encode);
+signed_message *RECON_Construct_Recon_Erasure_Message(dll_struct *list,int32u *more_to_encode);
 #endif

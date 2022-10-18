@@ -425,8 +425,7 @@ int32u OPENSSL_RSA_Verify_Signature( const byte *digest_value,
         rsa = public_rsa_by_server[number];
     }
     
-    ret = RSA_verify(NID_sha1, digest_value, DIGEST_SIZE, signature, SIGNATURE_SIZE,
-	    rsa );
+    ret = RSA_verify(NID_sha1, digest_value, DIGEST_SIZE, signature, SIGNATURE_SIZE,rsa );
     
     verify_count++;
    

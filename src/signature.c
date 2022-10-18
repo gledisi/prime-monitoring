@@ -206,8 +206,7 @@ void SIG_Make_Batch(int trigger, void *dummyp)
   BENCH.num_signatures++;
   BENCH.total_signed_messages += DATA.SIG.pending_messages_dll.length;
   if(DATA.SIG.pending_messages_dll.length > BENCH.max_signature_batch_size) {
-    BENCH.max_signature_batch_size = 
-      DATA.SIG.pending_messages_dll.length;
+    BENCH.max_signature_batch_size = DATA.SIG.pending_messages_dll.length;
   }
 
   SIG_Finish_Pending_Messages(signature);
@@ -271,8 +270,7 @@ void SIG_Finish_Pending_Messages(byte *signature)
   }
 
   UTIL_DLL_Set_Begin(&original_list);
-  while((mess = (signed_message *)UTIL_DLL_Front_Message(&original_list)) 
-	!= NULL) {
+  while((mess = (signed_message *)UTIL_DLL_Front_Message(&original_list))!= NULL) {
 
     assert(mess->type != UPDATE);
     BENCH.signature_types[mess->type]++;
@@ -281,9 +279,10 @@ void SIG_Finish_Pending_Messages(byte *signature)
     timeliness = UTIL_DLL_Front_Extra(&original_list, TIMELINESS);
     
     /* Once signed, client responses should be sent to the client */
-    if(mess->type == CLIENT_RESPONSE)
-      UTIL_Write_Client_Response(mess);   
-    else {
+    if(mess->type == CLIENT_RESPONSE) {
+        //TODO: was commented by me(maybe)
+        UTIL_Write_Client_Response(mess);
+    }else {
 
       /* Apply the message and then dispatch it, just as we would a local
        * message that we constructed, unless it's a RECON message. */

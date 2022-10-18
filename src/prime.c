@@ -54,6 +54,8 @@
 #include "recon.h"
 #include "tc_wrapper.h"
 #include "proactive_recovery.h"
+#include "sqlite3.h"
+#include "ic.h"
 
 /* Externally defined global variables */
 extern server_variables   VAR;
@@ -64,6 +66,7 @@ extern server_data_struct DATA;
 void Usage(int argc, char **argv);
 void Print_Usage(void);
 void Init_Memory_Objects(void);
+void init_sqlite_db();
 
 int main(int argc, char** argv) 
 {
@@ -129,6 +132,9 @@ int main(int argc, char** argv)
 
   Alarm(PRINT, "Finished reading keys.\n");
 
+  /* Start SQLite database */
+  init_sqlite_db();
+
   /* Initialize this server's data structures */
   DAT_Initialize();  
 
@@ -139,6 +145,37 @@ int main(int argc, char** argv)
   E_handle_events();
 
   return 0;
+}
+
+
+void init_sqlite_db(){
+    sqlite3 *db;
+    char *zErrMsg = 0;
+    int rc;
+    const char *sql;
+
+    rc = sqlite3_open(DB_NAME, &db);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        exit(1);
+    }
+
+    /* Create SQL statement */
+    sql = "CREATE TABLE IF NOT EXISTS server_data("
+          "ID INTEGER PRIMARY KEY NOT NULL,"
+          "NAME           TEXT    NOT NULL,"
+          "VALUE          INT     NOT NULL);";
+    /* Execute SQL statement */
+    rc = sqlite3_exec(db, sql, NULL, 0, &zErrMsg);
+
+    if( rc != SQLITE_OK ){
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+    } else {
+        fprintf(stdout, "Table created successfully\n");
+    }
+    sqlite3_close(db);
 }
 
 void Init_Memory_Objects(void)

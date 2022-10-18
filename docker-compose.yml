@@ -1,0 +1,118 @@
+version: '2'
+
+services:
+  prime_1:
+    container_name: prime_1
+    image: ggjinaj/prime:latest
+    environment:
+      - SERVER_NUM=1
+    ports:
+     - "7103:7103"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.5
+
+  prime_2:
+    container_name: prime_2
+    image: ggjinaj/prime:latest
+    environment:
+      - SERVER_NUM=2
+    ports:
+     - "7104:7104"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.6
+
+  prime_3:
+    container_name: prime_3
+    image: ggjinaj/prime:latest
+    environment:
+      - SERVER_NUM=3
+    ports:
+     - "7105:7105"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.7
+  
+  prime_4:
+    container_name: prime_4
+    image: ggjinaj/prime:latest
+    environment:
+      - SERVER_NUM=4
+    ports:
+     - "7106:7106"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.8
+
+  client_1:
+    container_name: prime_c1
+    image: ggjinaj/prime_c
+    environment:
+      - IP=10.5.0.9
+      - CLIENT_NUM=5
+      - SERVER_NUM=1
+      - PORT=8081
+    ports:
+     - "8081:8081"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.9
+    depends_on:
+     - prime_1
+
+  client_2:
+    container_name: prime_c2
+    image: ggjinaj/prime_c
+    environment:
+      - IP=10.5.0.10
+      - CLIENT_NUM=6
+      - SERVER_NUM=2
+      - PORT=8082
+    ports:
+     - "8082:8082"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.10
+    depends_on:
+     - prime_2
+     
+  client_3:
+    container_name: prime_c3
+    image: ggjinaj/prime_c
+    environment:
+      - IP=10.5.0.11
+      - CLIENT_NUM=7
+      - SERVER_NUM=3
+      - PORT=8083
+    ports:
+     - "8083:8083"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.11
+    depends_on:
+     - prime_3
+
+  client_4:
+    container_name: prime_c4
+    image: ggjinaj/prime_c
+    environment:
+      - IP=10.5.0.12
+      - CLIENT_NUM=8
+      - SERVER_NUM=4
+      - PORT=8084
+    ports:
+     - "8084:8084"
+    networks:
+      prime_net:
+        ipv4_address: 10.5.0.12
+    depends_on:
+     - prime_4
+
+networks:
+  prime_net:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.5.0.0/16
+         gateway: 10.5.0.1
