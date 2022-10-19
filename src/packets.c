@@ -1002,6 +1002,7 @@ signed_message *ORDER_Construct_Client_Response(int32u client_id, int32u incarna
   response_specific->ord_num      = ord_num;
   response_specific->event_idx    = event_idx;
   response_specific->event_tot    = event_tot;
+  response_specific->updates_exec = BENCH.updates_executed;
   response_specific->PO_time      = 0; 
 
   buf = (byte *)(response_specific + 1);

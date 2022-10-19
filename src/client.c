@@ -123,15 +123,11 @@ util_stopwatch sw;
 util_stopwatch latency_sw;
 signed_message *pending_update;
 double Latencies[MAX_ACTIONS];
-double previous_time;
+double latency_ms;
 int32u Histogram[NUM_BUCKETS];
 double Min_PO_Time, Max_PO_Time;
 struct sockaddr_un Conn;
 
-
-int get_value(){
-    return -1;
-}
 
 void clean_exit(int signum)
 {
@@ -547,10 +543,10 @@ void Process_Message(signed_message *mess, int32u num_bytes)
     Alarm(PRINT, "%d\ttotal=%f\tPO=%f\n", response_specific->seq_num,time, response_specific->PO_time);
   
   num_outstanding_updates--;
-  previous_time += time;
-  ic_measure("update");
-  ic_long("seq_num",response_specific->seq_num);
-  ic_double("latency",previous_time);
+  latency_ms = time*100;
+  ic_measure("updates");
+  ic_long("update_num",response_specific->updates_exec);
+  ic_double("latency",latency_ms);
   ic_measureend();
   ic_push();
 
@@ -631,8 +627,9 @@ void Send_Update(const char *key,int value)
     UTIL_Stopwatch_Start(&update_sw[time_stamp]);
 
 
-    if(CLIENTS_SIGN_UPDATES)
-      UTIL_RSA_Sign_Message(update);
+    if(CLIENTS_SIGN_UPDATES) {
+        UTIL_RSA_Sign_Message(update);
+    }
 
     Alarm(PRINT, "%d Sent %d to server %d\n",My_Client_ID, time_stamp, send_to_server);
 

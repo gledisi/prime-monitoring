@@ -26,7 +26,7 @@ rest_api::rest_api(char* port) {
 
     CROW_ROUTE(app, "/insert/<string>/<int>")([](std::string key,int val){
         Send_Update(key.c_str(),val);
-        //usleep(100);
+        usleep(200);
         return "OK";
     });
 

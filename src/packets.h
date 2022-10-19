@@ -235,6 +235,7 @@ typedef struct dummy_client_response_message {
   int32u event_idx;
   int32u event_tot;
   double PO_time;
+  u_int32_t updates_exec;
 } client_response_message;
 
 typedef struct dummy_tat_measure {
