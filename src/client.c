@@ -118,14 +118,15 @@ int32u executed[MAX_ACTIONS];
 int sd[NUM_SERVER_SLOTS];
 int sock;
 util_stopwatch update_sw[MAX_ACTIONS];
-
+int recon_attack_condition = 0;
+int delay_attack_condition = 0;
 util_stopwatch sw;
-util_stopwatch latency_sw;
-signed_message *pending_update;
-double Latencies[MAX_ACTIONS];
+//util_stopwatch latency_sw;
+//signed_message *pending_update;
+//double Latencies[MAX_ACTIONS];
 double latency_ms;
-int32u Histogram[NUM_BUCKETS];
-double Min_PO_Time, Max_PO_Time;
+//int32u Histogram[NUM_BUCKETS];
+//double Min_PO_Time, Max_PO_Time;
 struct sockaddr_un Conn;
 
 
@@ -412,8 +413,7 @@ void Net_Cli_Recv(channel sk, int dummy, void *dummy_p)
       CLIENT_Cleanup();
     }
     received_bytes = ret;
-  }
-  else {
+  }else {
       /* First read the signed message part (header), which can be used
        * to determine the length of the rest of the message. */
       ret = NET_Read(sk, srv_recv_scat.elements[0].buf, sizeof(signed_message));
@@ -429,8 +429,7 @@ void Net_Cli_Recv(channel sk, int dummy, void *dummy_p)
 
       remaining_bytes = expected_total_size - sizeof(signed_message);
 
-      Alarm(DEBUG, "Read %d bytes so far, expecting total size of %d\n",
-        ret, expected_total_size);
+      Alarm(DEBUG, "Read %d bytes so far, expecting total size of %d\n",ret, expected_total_size);
 
       ret = NET_Read(sk, &srv_recv_scat.elements[0].buf[sizeof(signed_message)], 
                remaining_bytes);
@@ -444,7 +443,7 @@ void Net_Cli_Recv(channel sk, int dummy, void *dummy_p)
       received_bytes = expected_total_size;
   }
     
-  Alarm(DEBUG, "Received %d bytes!\n", received_bytes);
+  //Alarm(DEBUG, "Received %d bytes!\n", received_bytes);
   
   /* Validate the client response */
   if(!Validate_Message((signed_message*)srv_recv_scat.elements[0].buf,received_bytes)) {
@@ -467,7 +466,6 @@ void Net_Cli_Recv(channel sk, int dummy, void *dummy_p)
 int32u Validate_Message( signed_message *mess, int32u num_bytes ) 
 {
   client_response_message *r;
-  signed_message *payload;
   /* int ret; */
  
   if(mess->type != CLIENT_RESPONSE) {
@@ -488,9 +486,7 @@ int32u Validate_Message( signed_message *mess, int32u num_bytes )
     return 0;
   }
 
-  payload = (signed_message *)(r+1);
-
-  Alarm(PRINT, "Executed value is:%d for seq %d. payload: %d. \n",executed[r->seq_num],r->seq_num,payload->machine_id);
+  //Alarm(PRINT, "Executed value is:%d for seq %d. payload: %d. \n",executed[r->seq_num],r->seq_num,payload->machine_id);
   if(executed[r->seq_num] != 0) {
     Alarm(PRINT, "Already processed response for seq %d\n", r->seq_num);
     return 0;
@@ -532,12 +528,12 @@ void Process_Message(signed_message *mess, int32u num_bytes)
   if (time >= 0.1)
     Alarm(PRINT, "** %d\ttotal=%f\tPO=%f\n", response_specific->seq_num, time,response_specific->PO_time);
   //value = mess->value;
-  Latencies[response_specific->seq_num] = time;
-  executed[response_specific->seq_num]  = 1;
+ // Latencies[response_specific->seq_num] = time;
+/*  executed[response_specific->seq_num]  = 1;
   if (response_specific->PO_time < Min_PO_Time)
     Min_PO_Time = response_specific->PO_time;
   if (response_specific->PO_time > Max_PO_Time)
-    Max_PO_Time = response_specific->PO_time;
+    Max_PO_Time = response_specific->PO_time;*/
 
   if(response_specific->seq_num % PRINT_INTERVAL == 0)
     Alarm(PRINT, "%d\ttotal=%f\tPO=%f\n", response_specific->seq_num,time, response_specific->PO_time);
@@ -560,10 +556,10 @@ void Process_Message(signed_message *mess, int32u num_bytes)
 void Run_Client()
 {
   memset(executed, 0, sizeof(int32u) * MAX_ACTIONS);
-  memset(Histogram, 0, sizeof(int32u) * NUM_BUCKETS);
+  //memset(Histogram, 0, sizeof(int32u) * NUM_BUCKETS);
 
-  Max_PO_Time = 0;
-  Min_PO_Time = 9999;
+  //Max_PO_Time = 0;
+  //Min_PO_Time = 9999;
 
   num_outstanding_updates = 0;
   my_incarnation = E_get_time().sec;
@@ -680,36 +676,36 @@ void CLIENT_Cleanup()
   fprintf(stdout, "Cleaning up...\n");
   fflush(stdout);
 
-  printf("Latencies for first 10 packets\n");
-  for (i = 0, count = 1; count <= 10 && i < time_stamp; i++)
-  {
-    if (executed[i]) {
-        printf("Pkt %u latency: %f\n", count, Latencies[i]);
-        count++;
-    }
-  }
+//  printf("Latencies for first 10 packets\n");
+//  for (i = 0, count = 1; count <= 10 && i < time_stamp; i++)
+//  {
+//    if (executed[i]) {
+//        printf("Pkt %u latency: %f\n", count, Latencies[i]);
+//        count++;
+//    }
+//  }
 
-  printf("Latency histogram\n");
-  for(i = 0; i < time_stamp; i++) {
-    if(executed[i]) {
-      sum += Latencies[i];
-      num_executed++;
-
-      /* Add to histogram */
-      index = Latencies[i] * 1000 / BUCKET_SIZE;
-      if (index >= NUM_BUCKETS)
-        index = NUM_BUCKETS - 1;
-      Histogram[index]++;
-    }
-  }
-
-  Alarm(PRINT, "Histogram of update latency:\n");
-  for(i = 0; i < NUM_BUCKETS-1; i++)
-    printf("\t[%2u - %2u]: %u\n", i*BUCKET_SIZE, (i+1)*BUCKET_SIZE, Histogram[i]);
-  printf("\t[%2u+]: %u\n", i*BUCKET_SIZE, Histogram[i]);
-
-  Alarm(PRINT, "Min PO Time = %f\n", Min_PO_Time);
-  Alarm(PRINT, "Max PO Time = %f\n", Max_PO_Time);
+//  printf("Latency histogram\n");
+//  for(i = 0; i < time_stamp; i++) {
+//    if(executed[i]) {
+//      sum += Latencies[i];
+//      num_executed++;
+//
+//      /* Add to histogram */
+//      index = Latencies[i] * 1000 / BUCKET_SIZE;
+//      if (index >= NUM_BUCKETS)
+//        index = NUM_BUCKETS - 1;
+//      Histogram[index]++;
+//    }
+//  }
+//
+//  Alarm(PRINT, "Histogram of update latency:\n");
+//  for(i = 0; i < NUM_BUCKETS-1; i++)
+//    printf("\t[%2u - %2u]: %u\n", i*BUCKET_SIZE, (i+1)*BUCKET_SIZE, Histogram[i]);
+//  printf("\t[%2u+]: %u\n", i*BUCKET_SIZE, Histogram[i]);
+//
+//  Alarm(PRINT, "Min PO Time = %f\n", Min_PO_Time);
+//  Alarm(PRINT, "Max PO Time = %f\n", Max_PO_Time);
 
   Alarm(PRINT, "%d: %d updates\tAverage Latency: %f\n",My_Client_ID, num_executed, (sum / (double)num_executed));
   fflush(stdout);
@@ -717,6 +713,7 @@ void CLIENT_Cleanup()
   exit(0);
 }
 
+/*
 double Compute_Average_Latency()
 {
   int32u i;
@@ -734,3 +731,4 @@ double Compute_Average_Latency()
 
   return (sum / (double)(time_stamp-1));
 }
+*/
