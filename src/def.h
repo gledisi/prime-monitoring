@@ -40,6 +40,8 @@
 #ifndef PRIME_DEF_H
 #define PRIME_DEF_H
 
+extern int recon_attack_condition;
+extern int delay_attack_condition;
 /*---------------------System-wide Configuration Settings-------------------*/
 
 /* Maximum number of tolerated Byzantine faults */
@@ -340,13 +342,13 @@
  * precise attack would compute the minimum time in the future that
  * the leader needs to send the next Pre-Prepare as a function of what
  * Proof-Matrix messages it has received. */
-#define DELAY_ATTACK 0
+#define DELAY_ATTACK (delay_attack_condition ? 1:0)
 #define DELAY_TARGET 0.020
 
 /* Set this to 1 to mount the reconciliation attack described in the paper.
  * Faulty servers only acknowledge each other's messages and don't send
  * their PO-Requests to f correct servers. */
-#define RECON_ATTACK 0
+#define RECON_ATTACK (recon_attack_condition ? 1:0)
 
 /*----------------------- Internally used defines-------------------------- */
 #define FALSE                      0

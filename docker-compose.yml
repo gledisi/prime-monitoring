@@ -6,6 +6,10 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=1
+      - MICROSECONDS=2500
+      - STEP=0
+      - PP_TYPE=2
+      - DELAY=0
     ports:
      - "7103:7103"
     networks:
@@ -17,6 +21,10 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=2
+      - MICROSECONDS=2500
+      - STEP=0
+      - PP_TYPE=2
+      - DELAY=0
     ports:
      - "7104:7104"
     networks:
@@ -28,6 +36,10 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=3
+      - MICROSECONDS=2500
+      - STEP=0
+      - PP_TYPE=2
+      - DELAY=0
     ports:
      - "7105:7105"
     networks:
@@ -39,6 +51,10 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=4
+      - MICROSECONDS=2500
+      - STEP=0
+      - PP_TYPE=2
+      - DELAY=0
     ports:
      - "7106:7106"
     networks:

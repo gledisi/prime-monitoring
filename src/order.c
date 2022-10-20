@@ -229,12 +229,10 @@ int32u ORDER_Send_One_Pre_Prepare(int32u caller)
     if (DATA.ORD.inconsistent_pp_type == 2) {
         Alarm(PRINT, "Launching Inconsistent PP Attack #2. seq = %u\n", DATA.ORD.seq - 1);
         cutoff = NUM_SERVERS/2;
-    }
-    else if (DATA.ORD.inconsistent_pp_type == 3) {
+    }else if (DATA.ORD.inconsistent_pp_type == 3) {
         Alarm(PRINT, "Launching Inconsistent PP Attack #3. seq = %u\n", DATA.ORD.seq - 1);
         cutoff = NUM_SERVERS - 2;
-    }
-    else {
+    }else {
         Alarm(EXIT, "Invalid PP attack. Must be -a 2 or -a 3 on CMD line\n");
     }
 

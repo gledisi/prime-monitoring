@@ -61,7 +61,8 @@
 extern server_variables   VAR;
 extern network_variables  NET;
 extern server_data_struct DATA;
-
+int recon_attack_condition = 0;
+int delay_attack_condition = 0;
 /* Local Function Definitions */
 void Usage(int argc, char **argv);
 void Print_Usage(void);
@@ -198,7 +199,6 @@ void Usage(int argc, char **argv)
 {
   int tmp;
   float tmp2;
-
   if(NUM_SERVERS != (3*NUM_F + 2*NUM_K + 1)) {
     Alarm(PRINT, "Configuration error: NUM_SERVERS must equal 3f+2k+1\n");
     exit(0);
@@ -223,44 +223,39 @@ void Usage(int argc, char **argv)
       sscanf(argv[1], "%d", &tmp);
       VAR.My_Server_ID = tmp;
       if(VAR.My_Server_ID > NUM_SERVERS || VAR.My_Server_ID <= 0) {
-	Alarm(PRINT,"Invalid server id: %d.  Index must be between 1 and %d.\n",
-	      VAR.My_Server_ID, NUM_SERVERS);
-	exit(0);
+	    Alarm(PRINT,"Invalid server id: %d.  Index must be between 1 and %d.\n",VAR.My_Server_ID, NUM_SERVERS);
+	    exit(0);
       }
       argc--; argv++;
-    }
-    else if( (argc > 2) && (!strncmp(*argv, "-d", 2)) ) {
-      DATA.ORD.delay_attack = 1;
+    }else if( (argc > 2) && (!strncmp(*argv, "-d", 2)) ) {
       sscanf(argv[1], "%d", &tmp);
-      DATA.ORD.microseconds_delayed = tmp;
       argc--; argv++;
       sscanf(argv[1], "%f", &tmp2);
-      DATA.ORD.step_duration = tmp2;
-      if (tmp2 == 0) {
-        Alarm(PRINT, "Invalid step duration %f. Must be > 0\n" , tmp2);
-        exit(0);
-      }
       argc--; argv++;
-    }
-    else if ( (argc > 2) && (!strncmp(*argv, "-a", 2)) ) {
-      DATA.ORD.inconsistent_pp_attack = 1;
-      sscanf(argv[1], "%d", &tmp);
-      DATA.ORD.inconsistent_pp_type = tmp;
-      if (tmp < 1 || tmp > 3) {
-        Alarm(PRINT, "Invalid type %d to attack w/ inconsistent PP. 1, 2, or 3 is valid\n", tmp);
-        exit(0);
+      if (tmp2 > 0) {
+          //delay_attack_condition = 1;
+          DATA.ORD.delay_attack = 1;
+          DATA.ORD.microseconds_delayed = tmp;
+          DATA.ORD.step_duration = tmp2;
+          Alarm(PRINT, "Delay attack microseconds delayed=%d step_duration=%f. \n" , tmp,tmp2);
+        //exit(0);
       }
+    }else if ( (argc > 2) && (!strncmp(*argv, "-a", 2)) ) {
+
+      sscanf(argv[1], "%d", &tmp);
       argc--; argv++;
       sscanf(argv[1], "%f", &tmp2);
-      DATA.ORD.inconsistent_delay = tmp2;
-      if (tmp2 == 0) {
-        Alarm(PRINT, "Invalid inconsistent PP delay %f. Must be > 0\n" , tmp2);
-        exit(0);
-      }
       argc--; argv++;
+      if (tmp >= 1 && tmp <= 3 && tmp2>0) {
+          //recon_attack_condition = 1;
+          DATA.ORD.inconsistent_pp_attack = 1;
+          DATA.ORD.inconsistent_pp_type = tmp;
+          DATA.ORD.inconsistent_delay = tmp2;
+        Alarm(PRINT, "Attack type %d w/ inconsistent delay %f\n", tmp,tmp2);
+      }
+    }else {
+        Print_Usage();
     }
-    else
-      Print_Usage();
   }
 }
 
