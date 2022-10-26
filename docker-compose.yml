@@ -6,9 +6,9 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=1
-      - MICROSECONDS=2500
-      - STEP=0
-      - PP_TYPE=2
+      - MICROSECONDS=300
+      - STEP=30
+      - PP_TYPE=0
       - DELAY=0
     ports:
      - "7103:7103"
@@ -21,9 +21,9 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=2
-      - MICROSECONDS=2500
-      - STEP=0
-      - PP_TYPE=2
+      - MICROSECONDS=300
+      - STEP=30
+      - PP_TYPE=0
       - DELAY=0
     ports:
      - "7104:7104"
@@ -36,9 +36,9 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=3
-      - MICROSECONDS=2500
-      - STEP=0
-      - PP_TYPE=2
+      - MICROSECONDS=300
+      - STEP=30
+      - PP_TYPE=0
       - DELAY=0
     ports:
      - "7105:7105"
@@ -51,9 +51,9 @@ services:
     image: ggjinaj/prime:latest
     environment:
       - SERVER_NUM=4
-      - MICROSECONDS=2500
-      - STEP=0
-      - PP_TYPE=2
+      - MICROSECONDS=300
+      - STEP=30
+      - PP_TYPE=0
       - DELAY=0
     ports:
      - "7106:7106"
@@ -69,6 +69,7 @@ services:
       - CLIENT_NUM=5
       - SERVER_NUM=1
       - PORT=8081
+      - NUM_CLIENTS_TO_EMULATE=200
     ports:
      - "8081:8081"
     networks:
@@ -85,6 +86,7 @@ services:
       - CLIENT_NUM=6
       - SERVER_NUM=2
       - PORT=8082
+      - NUM_CLIENTS_TO_EMULATE=200
     ports:
      - "8082:8082"
     networks:
@@ -101,6 +103,7 @@ services:
       - CLIENT_NUM=7
       - SERVER_NUM=3
       - PORT=8083
+      - NUM_CLIENTS_TO_EMULATE=100
     ports:
      - "8083:8083"
     networks:
@@ -117,6 +120,7 @@ services:
       - CLIENT_NUM=8
       - SERVER_NUM=4
       - PORT=8084
+      - NUM_CLIENTS_TO_EMULATE=50
     ports:
      - "8084:8084"
     networks:

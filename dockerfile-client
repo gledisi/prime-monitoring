@@ -8,4 +8,4 @@ RUN make client
 
 WORKDIR /prime-client/bin
 
-CMD ./client -l $IP -i $CLIENT_NUM -s $SERVER_NUM -p $PORT
+CMD ./client -l $IP -i $CLIENT_NUM -s $SERVER_NUM -p $PORT -c $NUM_CLIENTS_TO_EMULATE
