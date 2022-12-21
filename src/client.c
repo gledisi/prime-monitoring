@@ -591,10 +591,11 @@ void init_influx_db() {
     char *user = "admin";
     char *pass = "admin1234";
     Alarm(PRINT, "Connecting with influx...\n");
+    Alarm(PRINT, "Influx IP: %s\n",NET.influx_db_address);
     char buf[300 + 1];
     char myhostname[256 + 1];
     //ic_debug(1); /* medium output */
-    ic_influx_database("172.17.0.1", 8086, "test1");
+    ic_influx_database(NET.influx_db_address, 8086, "test1");
     ic_influx_userpw(user, pass);
     /* get the local machine hostname */
     if (gethostname(myhostname, sizeof(myhostname)) == -1) {

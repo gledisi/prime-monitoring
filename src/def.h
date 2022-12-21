@@ -39,13 +39,12 @@
 
 #ifndef PRIME_DEF_H
 #define PRIME_DEF_H
-
 extern int recon_attack_condition;
 extern int delay_attack_condition;
 /*---------------------System-wide Configuration Settings-------------------*/
 
 /* Maximum number of tolerated Byzantine faults */
-#define NUM_F 1
+#define NUM_F 2
 
 /* Maximum number of tolerated benign faults, including rejuvenations,
  * disconnections (network partition/attack), and crashes */

@@ -83,7 +83,7 @@ typedef struct network_variables_dummy {
   /* Stores the IP address of each server, read from configuration file  */
   int32 server_address[NUM_SERVER_SLOTS];
   char server_address_name[NUM_SERVER_SLOTS][16];
-
+  char influx_db_address[16];
 #ifdef SET_USE_SPINES
   channel  Spines_Channel;
   int32 server_address_spines[NUM_SERVER_SLOTS];

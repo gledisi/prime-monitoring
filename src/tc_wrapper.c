@@ -300,7 +300,7 @@ void TC_Generate(int req_shares, char *directory)
 	num_sites = NUM_SITES;
 
 	for ( nsite = 1; nsite <= num_sites; nsite++ ) {
-		printf("Generating threshold crypto keys for site %d\n",nsite);
+		printf("Generating threshold crypto keys for site (servers) %d (%d)\n",nsite,n);
 		dealer = NULL;
 		/* while ( dealer == NULL ) */
 		dealer = TC_generate(keysize/2, n, k, 17);

@@ -1,0 +1,286 @@
+version: '2'
+
+services:
+  prime_1:
+    container_name: prime_1
+    image: ggjinaj/prime_7:latest
+    environment:
+      - SERVER_NUM=1
+      - MICROSECONDS=0
+      - STEP=0
+      - PP_TYPE=0
+      - DELAY=0
+    ports:
+     - "7103:7103"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.3
+
+  prime_2:
+    container_name: prime_2
+    image: ggjinaj/prime_7:latest
+    environment:
+      - SERVER_NUM=2
+      - MICROSECONDS=0
+      - STEP=0
+      - PP_TYPE=0
+      - DELAY=0
+    ports:
+     - "7104:7104"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.4
+
+  prime_3:
+    container_name: prime_3
+    image: ggjinaj/prime_7:latest
+    environment:
+      - SERVER_NUM=3
+      - MICROSECONDS=0
+      - STEP=0
+      - PP_TYPE=0
+      - DELAY=0
+    ports:
+     - "7105:7105"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.5
+  
+  prime_4:
+    container_name: prime_4
+    image: ggjinaj/prime_7:latest
+    environment:
+      - SERVER_NUM=4
+      - MICROSECONDS=0
+      - STEP=0
+      - PP_TYPE=0
+      - DELAY=0
+    ports:
+     - "7106:7106"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.6
+        
+  prime_5:
+    container_name: prime_5
+    image: ggjinaj/prime_7:latest
+    environment:
+      - SERVER_NUM=5
+      - MICROSECONDS=0
+      - STEP=0
+      - PP_TYPE=0
+      - DELAY=0
+    ports:
+     - "7107:7107"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.7
+
+  prime_6:
+    container_name: prime_6
+    image: ggjinaj/prime_7:latest
+    environment:
+      - SERVER_NUM=6
+      - MICROSECONDS=0
+      - STEP=0
+      - PP_TYPE=0
+      - DELAY=0
+    ports:
+     - "7108:7108"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.8
+  
+  prime_7:
+    container_name: prime_7
+    image: ggjinaj/prime_7:latest
+    environment:
+      - SERVER_NUM=7
+      - MICROSECONDS=0
+      - STEP=0
+      - PP_TYPE=0
+      - DELAY=0
+    ports:
+     - "7109:7109"
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.9
+
+  client_1:
+    container_name: prime_c1
+    image: ggjinaj/prime_c7
+    environment:
+      - IP=192.168.55.10
+      - CLIENT_NUM=5
+      - SERVER_NUM=1
+      - PORT=8081
+      - NUM_CLIENTS_TO_EMULATE=100
+    ports:
+     - "8081:8081"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.10
+    depends_on:
+     - prime_1
+
+  client_2:
+    container_name: prime_c2
+    image: ggjinaj/prime_c7
+    environment:
+      - IP=192.168.55.11
+      - CLIENT_NUM=6
+      - SERVER_NUM=2
+      - PORT=8082
+      - NUM_CLIENTS_TO_EMULATE=100
+    ports:
+     - "8082:8082"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.11
+    depends_on:
+     - prime_2
+     
+  client_3:
+    container_name: prime_c3
+    image: ggjinaj/prime_c7
+    environment:
+      - IP=192.168.55.12
+      - CLIENT_NUM=7
+      - SERVER_NUM=3
+      - PORT=8083
+      - NUM_CLIENTS_TO_EMULATE=100
+    ports:
+     - "8083:8083"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.12
+    depends_on:
+     - prime_3
+
+  client_4:
+    container_name: prime_c4
+    image: ggjinaj/prime_c7
+    environment:
+      - IP=192.168.55.13
+      - CLIENT_NUM=8
+      - SERVER_NUM=4
+      - PORT=8084
+      - NUM_CLIENTS_TO_EMULATE=100
+    ports:
+     - "8084:8084"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.13
+    depends_on:
+     - prime_4
+     
+  client_5:
+    container_name: prime_c5
+    image: ggjinaj/prime_c7
+    environment:
+      - IP=192.168.55.14
+      - CLIENT_NUM=9
+      - SERVER_NUM=5
+      - PORT=8085
+      - NUM_CLIENTS_TO_EMULATE=100
+    ports:
+     - "8085:8085"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.14
+    depends_on:
+     - prime_5
+     
+  client_6:
+    container_name: prime_c6
+    image: ggjinaj/prime_c7
+    environment:
+      - IP=192.168.55.15
+      - CLIENT_NUM=10
+      - SERVER_NUM=6
+      - PORT=8096
+      - NUM_CLIENTS_TO_EMULATE=100
+    ports:
+     - "8096:8096"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.15
+    depends_on:
+     - prime_6
+
+  client_7:
+    container_name: prime_c7
+    image: ggjinaj/prime_c7
+    environment:
+      - IP=192.168.55.16
+      - CLIENT_NUM=11
+      - SERVER_NUM=7
+      - PORT=8087
+      - NUM_CLIENTS_TO_EMULATE=100
+    ports:
+     - "8087:8087"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
+    networks:
+      prime_net_1:
+        ipv4_address: 192.168.55.16
+    depends_on:
+     - prime_7
+
+networks:
+  prime_net_1:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 192.168.55.0/24
+         gateway: 192.168.55.1

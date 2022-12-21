@@ -12,6 +12,10 @@ services:
       - DELAY=0
     ports:
      - "7103:7103"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.3
@@ -27,6 +31,10 @@ services:
       - DELAY=0
     ports:
      - "7104:7104"
+    volumes:
+       - type: bind
+         source: /home/gledisgjinaj/prime-config/address.config
+         target: /prime/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.4
@@ -42,6 +50,10 @@ services:
       - DELAY=0
     ports:
      - "7105:7105"
+    volumes:
+       - type: bind
+         source: /home/gledisgjinaj/prime-config/address.config
+         target: /prime/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.5
@@ -57,6 +69,10 @@ services:
       - DELAY=0
     ports:
      - "7106:7106"
+    volumes:
+      - type: bind
+        source: /home/gledisgjinaj/prime-config/address.config
+        target: /prime/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.6
@@ -69,9 +85,13 @@ services:
       - CLIENT_NUM=5
       - SERVER_NUM=1
       - PORT=8081
-      - NUM_CLIENTS_TO_EMULATE=200
+      - NUM_CLIENTS_TO_EMULATE=100
     ports:
      - "8081:8081"
+    volumes:
+       - type: bind
+         source: /home/gledisgjinaj/prime-config/address.config
+         target: /prime-client/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.7
@@ -86,9 +106,13 @@ services:
       - CLIENT_NUM=6
       - SERVER_NUM=2
       - PORT=8082
-      - NUM_CLIENTS_TO_EMULATE=200
+      - NUM_CLIENTS_TO_EMULATE=100
     ports:
      - "8082:8082"
+    volumes:
+       - type: bind
+         source: /home/gledisgjinaj/prime-config/address.config
+         target: /prime-client/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.8
@@ -106,6 +130,10 @@ services:
       - NUM_CLIENTS_TO_EMULATE=100
     ports:
      - "8083:8083"
+    volumes:
+       - type: bind
+         source: /home/gledisgjinaj/prime-config/address.config
+         target: /prime-client/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.9
@@ -120,9 +148,13 @@ services:
       - CLIENT_NUM=8
       - SERVER_NUM=4
       - PORT=8084
-      - NUM_CLIENTS_TO_EMULATE=50
+      - NUM_CLIENTS_TO_EMULATE=100
     ports:
      - "8084:8084"
+    volumes:
+       - type: bind
+         source: /home/gledisgjinaj/prime-config/address.config
+         target: /prime-client/bin/address.config
     networks:
       prime_net_1:
         ipv4_address: 192.168.55.10

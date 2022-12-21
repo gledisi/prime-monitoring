@@ -150,22 +150,30 @@ void Load_Addrs_From_File(char *fileName, int32 addrs[NUM_SERVER_SLOTS])
                 ip4, num_assigned, num_expected);
 
     /* Sanity check input */
-    if (server <= 0 || server > NUM_SERVERS) {
-        Alarm(EXIT, "ERROR: Load_Addrs_From_File: Invalid input. Config includes "
-                    "server %d outside valid range (1 - %d).\n", server, NUM_SERVERS);
+    if (server <= 0) {
+        Alarm(EXIT, "ERROR: Load_Addrs_From_File: Invalid input. Config includes server %d outside valid range (1 - %d).\n", server, NUM_SERVERS);
     }
-    if (addrs[server] != 0) {
+    //read servers IP
+    if(server<=NUM_SERVERS) {
+      if (addrs[server] != 0) {
         Alarm(EXIT, "ERROR: Load_Addrs_From_File: Multiple entries for server "
                     "%d\n", server);
-    }
+      }
 
-    /* Correctly formatted input. Store the address */
-    addrs[server] = ((ip1 << 24 ) | (ip2 << 16) | (ip3 << 8) | ip4);
-    sprintf(ip, "%d.%d.%d.%d", ip1,ip2,ip3,ip4);
-    strcpy(NET.server_address_name[server],ip);
+      /* Correctly formatted input. Store the address */
+      addrs[server] = ((ip1 << 24) | (ip2 << 16) | (ip3 << 8) | ip4);
+      sprintf(ip, "%d.%d.%d.%d", ip1, ip2, ip3, ip4);
+      strcpy(NET.server_address_name[server], ip);
+    }
+    //read influx_db IP
+    if(server==NUM_SERVERS+1) {
+      sprintf(ip, "%d.%d.%d.%d", ip1, ip2, ip3, ip4);
+      strcpy(NET.influx_db_address, ip);
+    }
     /* Read next line */
     num_assigned = fscanf(f,"%d %d.%d.%d.%d", &server, &ip1, &ip2, &ip3, &ip4);
   }
+
   
   /* Validate that every entry of the data structure was initialized */
   for (server = 1; server <= NUM_SERVERS; server++) {
